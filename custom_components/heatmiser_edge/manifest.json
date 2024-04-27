@@ -1,0 +1,12 @@
+{
+    "domain": "heatmiser_edge",
+    "name": "Heatmiser Edge Thermostat",
+    "codeowners": ["@sftgunner"],
+    "config_flow": false,
+    "documentation": "https://github.com/sftgunner/heatmiser_edge-integration",
+    "integration_type": "device",
+    "iot_class": "local_polling",
+    "issue_tracker": "https://github.com/sftgunner/heatmiser_edge-integration/issues",
+    "requirements": ["modbus"],
+    "version": "0.0.1"
+}
