@@ -8,7 +8,17 @@ TBD
 
 ### Configuration
 
-TBD
+Inside configuration.yaml:
+
+```yaml
+climate:
+  - platform: heatmiser_edge
+    host: 192.168.1.44
+    port: 502
+    tstats:
+      - id: 1
+        name: EdgeTherm1
+```
 
 ## Features
 
