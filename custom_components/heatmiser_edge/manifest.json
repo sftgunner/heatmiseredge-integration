@@ -2,6 +2,7 @@
     "domain": "heatmiser_edge",
     "name": "Heatmiser Edge Thermostat",
     "codeowners": ["@sftgunner"],
+    "config_flow": true,
     "documentation": "https://github.com/sftgunner/heatmiser_edge-integration",
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/sftgunner/heatmiser_edge-integration/issues",
