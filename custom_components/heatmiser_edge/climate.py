@@ -81,6 +81,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         self._port = port
         self._slave_id = slave_id
         self._name = f"{name} thermostat"
+        self._device_name = name
         self._preset_mode = "SCHEDULE"
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
         self.register_store = register_store
@@ -94,7 +95,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         """Return the device info"""
         return DeviceInfo(
             identifiers={(DOMAIN,self._id)},
-                name=self._name,
+                name=self._device_name,
                 sw_version="1.0.0",
                 model="Edge",
                 manufacturer="Heatmiser",
@@ -112,21 +113,30 @@ class HeatmiserEdgeThermostat(ClimateEntity):
     @property
     def current_temperature(self):
         """Return the current temperature."""
+        self._current_temperature = self.register_store.registers[int(RegisterAddresses.ROOM_TEMPERATURE_RD)] / 10
         return self._current_temperature
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
+        self._target_temperature = self.register_store.registers[int(RegisterAddresses.CURRENT_SETTING_TEMPERATURE_RD)] / 10
         return self._target_temperature
 
     @property
     def preset_mode(self):
         """The current active preset"""
+        self._preset_mode = PRESET_MODES[self.register_store.registers[int(RegisterAddresses.CURRENT_OPERATION_MODE_RD)]]
         return self._preset_mode
 
     @property
     def hvac_mode(self):
         """The current mode (heat/off)"""
+        onoff_state = self.register_store.registers[int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE)]
+        match onoff_state:
+            case 1:
+                self._hvac_mode = HVACMode.HEAT
+            case 0:
+                self._hvac_mode = HVACMode.OFF
         return self._hvac_mode
 
     async def async_turn_on(self):
@@ -186,35 +196,3 @@ class HeatmiserEdgeThermostat(ClimateEntity):
 
     async def async_update(self) -> None:
         await self.register_store.async_update()
-        # client = AsyncModbusTcpClient(self._host)
-        # await client.connect()
-
-        # register_updated_values = [None] * 218
-
-        # # Seems like the most amount of registers we can update at a time is 10
-        # for i in range (0,200,10):
-        #     result = await client.read_holding_registers(i, 10, self._slave_id)     # get information from device
-        #     register_updated_values[i:i+10] = result.registers
-
-        # result = await client.read_holding_registers(210, 8, self._slave_id)     # Do last 8 seperately
-        # register_updated_values[210:218] = result.registers
-        # self.register_store.registers = register_updated_values
-
-        # current_temperature_result = await client.read_holding_registers(int(RegisterAddresses.ROOM_TEMPERATURE_RD), SINGLE_REGISTER, self._slave_id)
-        self._current_temperature = self.register_store.registers[int(RegisterAddresses.ROOM_TEMPERATURE_RD)] / 10
-
-        # target_temperature_result = await client.read_holding_registers(int(RegisterAddresses.CURRENT_SETTING_TEMPERATURE_RD), SINGLE_REGISTER, self._slave_id)
-        self._target_temperature = self.register_store.registers[int(RegisterAddresses.CURRENT_SETTING_TEMPERATURE_RD)] / 10
-
-        # cur_preset_mode = await client.read_holding_registers(int(RegisterAddresses.CURRENT_OPERATION_MODE_RD), SINGLE_REGISTER, self._slave_id)
-        self._preset_mode = PRESET_MODES[self.register_store.registers[int(RegisterAddresses.CURRENT_OPERATION_MODE_RD)]]
-
-        # onoff_state = await client.read_holding_registers(int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE), SINGLE_REGISTER , self._slave_id)
-        onoff_state = self.register_store.registers[int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE)]
-        match onoff_state:
-            case 1:
-                self._hvac_mode = HVACMode.HEAT
-            case 0:
-                self._hvac_mode = HVACMode.OFF
-
-        # client.close()                                   # Disconnect device

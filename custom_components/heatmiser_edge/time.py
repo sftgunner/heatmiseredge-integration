@@ -87,6 +87,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         self._slave_id = slave_id
         self._register_id = register_id
         self._name = f"{register_name}"
+        self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 
         self.register_store = register_store
@@ -102,7 +103,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         """Return the device info"""
         return DeviceInfo(
             identifiers={(DOMAIN,self._id)},
-                name=self._name,
+                name=self._device_name,
                 sw_version="1.0.0",
                 model="Edge",
                 manufacturer="Heatmiser",
@@ -124,6 +125,11 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
     @property
     def native_value(self):
         """Return the current time."""
+        if self.register_store.registers[self._register_id] in (None, 24):
+            self._native_value = None
+        else:
+            self._native_value = time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
+
         return self._native_value
 
     # @property
@@ -141,15 +147,12 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
 
         self._native_value = value
 
-    async def async_update(self) -> None:
-        _LOGGER.warning("Attempting to update time")
-        # client = AsyncModbusTcpClient(self._host)
-        # await client.connect()
-        # value_result = await client.read_holding_registers(self._register_id, SINGLE_REGISTER, self._slave_id)
-        # self._current_temperature = value_result.registers[0]/10
+    # async def async_update(self) -> None:
+    #     _LOGGER.warning("Attempting to update time (skipping)")
+    #     # client = AsyncModbusTcpClient(self._host)
+    #     # await client.connect()
+    #     # value_result = await client.read_holding_registers(self._register_id, SINGLE_REGISTER, self._slave_id)
+    #     # self._current_temperature = value_result.registers[0]/10
 
-        # client.close()
-        if self.register_store.registers[self._register_id] in (None, 24):
-            self._native_value = None
-        else:
-            self._native_value = time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
+    #     # client.close()
+

@@ -12,7 +12,7 @@ from .heatmiser_edge import *
 # List of platforms to support. There should be a matching .py file for each,
 # eg <cover.py> and <sensor.py>
 # PLATFORMS = [Platform.CLIMATE, Platform.NUMBER]
-PLATFORMS = [Platform.CLIMATE, Platform.NUMBER, Platform.TIME]
+PLATFORMS = [Platform.CLIMATE, Platform.NUMBER, Platform.TIME, Platform.BUTTON, Platform.SENSOR, Platform.BINARY_SENSOR]
 
 _LOGGER = logging.getLogger(__name__)
 

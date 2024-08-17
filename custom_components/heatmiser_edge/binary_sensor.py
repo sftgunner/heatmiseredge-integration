@@ -10,10 +10,9 @@ import voluptuous as vol
 from .const import *
 from .heatmiser_edge import *
 
-from homeassistant.components.number import (
-    NumberEntity,
-    NumberDeviceClass,
-    NumberMode,
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity,
+    BinarySensorDeviceClass,
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
@@ -49,29 +48,40 @@ async def async_setup_entry(
     slave_id = config_entry.data["modbus_id"]
     name = config_entry.data["name"]
 
-    ScheduleTempRegisters = []
+    ReadableRegisters = []
 
-    register_map = {
-        "1Mon": 76,
-        "2Tue": 100,
-        "3Wed": 124,
-        "4Thu": 148,
-        "5Fri": 172,
-        "6Sat": 196,
-        "7Sun": 52
-    }
+    # register_map = {
+    #     "Code version number": 0,
+    #     "Relay status": 1, # Should be a binary_sensor
+    #     "Time period (current)": 9,
+    #     "Time period (next scheduled)": 10,
+    #     "Daylight saving status": 11, # Should be a binary_sensor
+    #     "Rate of Change": 12, # Add specific units
+    #     "Board sensor temp (raw)": 14, # Add scaling and units
+    #     "Board sensor temp (calib)": 15, # Add scaling and units
+    #     "Switching differential": 21, # Add scaling and units, should be editable
+    #     "Output delay": 22, # Add units, should be editable
+    #     "Pre-heat limit (optimum start)": 26 # Add units hrs, should be editable
+    # }
 
-    for dayname, startingregister in register_map.items():
-        for i in range(0,4):
-            ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_store, startingregister+(i*4), f"{dayname} Period{i+1} Temp"))
+    register_lookup = [
+        {"name": "Relay status", "register": 1},
+        {"name": "Daylight saving status", "register": 11},
+    ]
+
+    for rg in register_lookup:
+        ReadableRegisters.append(HeatmiserEdgeReadableRegisterBinary(host, port, slave_id, name, register_store, rg["register"], rg["name"]))
+
+    # for registername, register_num in register_map.items():
+    #     ReadableRegisters.append(HeatmiserEdgeReadableRegisterGeneric(host, port, slave_id, name, register_store, register_num, registername))
 
     # Add all entities to HA
-    async_add_entities(ScheduleTempRegisters)
+    async_add_entities(ReadableRegisters)
 
 
 
 
-class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
+class HeatmiserEdgeReadableRegisterBinary(BinarySensorEntity):
     """Representation of a Heatmiser Edge thermostat."""
 
     def __init__(self, host, port, slave_id, name, register_store: heatmiser_edge_register_store, register_id, register_name):
@@ -86,12 +96,7 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
 
         self.register_store = register_store
 
-        self._native_value = None
-
-        self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-        self._attr_mode = NumberMode.BOX
-        self._attr_device_class = NumberDeviceClass.TEMPERATURE
-        self._attr_native_step = 0.5
+        self._is_on = None
 
 
         if port != 502:
@@ -111,7 +116,7 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
     
     @property
     def entity_category(self):
-        return EntityCategory.CONFIG
+        return EntityCategory.DIAGNOSTIC
 
     @property
     def name(self):
@@ -120,24 +125,13 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
 
     @property
     def unique_id(self):
-        return f"{self._id}_writableregister{self._register_id}"
+        return f"{self._id}_readableregister{self._register_id}"
 
     @property
-    def native_value(self):
-        """Return the current temperature."""
+    def is_on(self):
+        """Return the current value."""
         if self.register_store.registers[self._register_id] != None:
-            self._native_value = self.register_store.registers[self._register_id]/10
+            self._is_on = bool(self.register_store.registers[self._register_id])
         else:
-            self._native_value = None
-        return self._native_value
-
-
-    async def async_set_native_value(self,value: float) -> None:
-        """Update the current value."""
-        _LOGGER.warning("Attempting to set native value")
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(self._register_id, int(value)*10 , self._slave_id)
-        client.close()
-
-        self._native_value = int(value)
+            self._is_on = None
+        return self._is_on

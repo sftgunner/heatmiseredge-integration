@@ -10,10 +10,8 @@ import voluptuous as vol
 from .const import *
 from .heatmiser_edge import *
 
-from homeassistant.components.number import (
-    NumberEntity,
-    NumberDeviceClass,
-    NumberMode,
+from homeassistant.components.button import (
+    ButtonEntity,
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
@@ -49,21 +47,28 @@ async def async_setup_entry(
     slave_id = config_entry.data["modbus_id"]
     name = config_entry.data["name"]
 
+    # register_id = int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE)
+
     ScheduleTempRegisters = []
 
     register_map = {
-        "1Mon": 76,
-        "2Tue": 100,
-        "3Wed": 124,
-        "4Thu": 148,
-        "5Fri": 172,
-        "6Sat": 196,
-        "7Sun": 52
+        "1Mon": 74,
+        "2Tue": 98,
+        "3Wed": 122,
+        "4Thu": 146,
+        "5Fri": 170,
+        "6Sat": 194,
+        "7Sun": 50
     }
 
     for dayname, startingregister in register_map.items():
         for i in range(0,4):
-            ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_store, startingregister+(i*4), f"{dayname} Period{i+1} Temp"))
+            ScheduleTempRegisters.append(HeatmiserEdgeClearTimePeriodButton(host, port, slave_id, name, register_store, startingregister+(i*4), f"{dayname} Period{i+1} Temp delete"))
+    
+
+
+
+    # WritableRegister = HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_id, register_name)
 
     # Add all entities to HA
     async_add_entities(ScheduleTempRegisters)
@@ -71,7 +76,7 @@ async def async_setup_entry(
 
 
 
-class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
+class HeatmiserEdgeClearTimePeriodButton(ButtonEntity):
     """Representation of a Heatmiser Edge thermostat."""
 
     def __init__(self, host, port, slave_id, name, register_store: heatmiser_edge_register_store, register_id, register_name):
@@ -85,13 +90,6 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 
         self.register_store = register_store
-
-        self._native_value = None
-
-        self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-        self._attr_mode = NumberMode.BOX
-        self._attr_device_class = NumberDeviceClass.TEMPERATURE
-        self._attr_native_step = 0.5
 
 
         if port != 502:
@@ -120,24 +118,15 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
 
     @property
     def unique_id(self):
-        return f"{self._id}_writableregister{self._register_id}"
-
-    @property
-    def native_value(self):
-        """Return the current temperature."""
-        if self.register_store.registers[self._register_id] != None:
-            self._native_value = self.register_store.registers[self._register_id]/10
-        else:
-            self._native_value = None
-        return self._native_value
+        return f"{self._id}_clearregister{self._register_id}"
 
 
-    async def async_set_native_value(self,value: float) -> None:
+    async def async_press(self) -> None:
         """Update the current value."""
-        _LOGGER.warning("Attempting to set native value")
+        _LOGGER.warning("Attempting to clear time period")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, int(value)*10 , self._slave_id)
+        await client.write_register(self._register_id, int(24) , self._slave_id)
         client.close()
 
-        self._native_value = int(value)
+        self.register_store.registers[self._register_id] = int(24)
