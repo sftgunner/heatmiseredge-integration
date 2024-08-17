@@ -143,7 +143,7 @@ class HeatmiserEdgeReadableRegisterGeneric(SensorEntity):
             if (self._gain == 1) and (self._offset == 0):
                 self._native_value = int(self.register_store.registers[self._register_id])
             else:
-                self._native_value = (self.register_store.registers[self._register_id] / self._gain) + self._offset
+                self._native_value = (self.register_store.registers[self._register_id] / self._gain) - self._offset
         else:
             self._native_value = None
         return self._native_value
