@@ -8,6 +8,7 @@ from typing import Any
 import voluptuous as vol
 
 from .const import *
+from .heatmiser_edge import *
 
 from homeassistant.components.climate import (
     PLATFORM_SCHEMA as CLIMATE_PLATFORM_SCHEMA,
@@ -43,14 +44,14 @@ async def async_setup_entry(
     """Add cover for passed config_entry in HA."""
     # The hub is loaded from the associated hass.data entry that was created in the
     # __init__.async_setup_entry function
-    # npu = hass.data[DOMAIN][config_entry.entry_id]
+    register_store = hass.data[DOMAIN][config_entry.entry_id]
 
     host = config_entry.data["host"]
     port = config_entry.data["port"]
     slave_id = config_entry.data["modbus_id"]
     name = config_entry.data["name"]
 
-    thermostat = HeatmiserEdgeThermostat(host, port, slave_id, name)
+    thermostat = HeatmiserEdgeThermostat(host, port, slave_id, name, register_store)
 
     # Add all entities to HA
     async_add_entities([thermostat])
@@ -70,7 +71,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         | ClimateEntityFeature.TURN_ON
     )
 
-    def __init__(self, host, port, slave_id, name):
+    def __init__(self, host, port, slave_id, name, register_store: heatmiser_edge_register_store):
         """Initialize the thermostat."""
         self.temperature_unit = UnitOfTemperature.CELSIUS
         self._current_temperature = None
@@ -79,9 +80,10 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         self._host = host
         self._port = port
         self._slave_id = slave_id
-        self._name = name
+        self._name = f"{name} thermostat"
         self._preset_mode = "SCHEDULE"
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
+        self.register_store = register_store
 
         if port != 502:
             _LOGGER.error("Support not added for ports other than 502")
@@ -183,23 +185,36 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         await self.async_update() # Force an update
 
     async def async_update(self) -> None:
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
+        await self.register_store.async_update()
+        # client = AsyncModbusTcpClient(self._host)
+        # await client.connect()
 
-        current_temperature_result = await client.read_holding_registers(int(RegisterAddresses.ROOM_TEMPERATURE_RD), SINGLE_REGISTER, self._slave_id)
-        self._current_temperature = current_temperature_result.registers[0] / 10
+        # register_updated_values = [None] * 218
 
-        target_temperature_result = await client.read_holding_registers(int(RegisterAddresses.CURRENT_SETTING_TEMPERATURE_RD), SINGLE_REGISTER, self._slave_id)
-        self._target_temperature = target_temperature_result.registers[0] / 10
+        # # Seems like the most amount of registers we can update at a time is 10
+        # for i in range (0,200,10):
+        #     result = await client.read_holding_registers(i, 10, self._slave_id)     # get information from device
+        #     register_updated_values[i:i+10] = result.registers
 
-        cur_preset_mode = await client.read_holding_registers(int(RegisterAddresses.CURRENT_OPERATION_MODE_RD), SINGLE_REGISTER, self._slave_id)
-        self._preset_mode = PRESET_MODES[cur_preset_mode.registers[0]]
+        # result = await client.read_holding_registers(210, 8, self._slave_id)     # Do last 8 seperately
+        # register_updated_values[210:218] = result.registers
+        # self.register_store.registers = register_updated_values
 
-        onoff_state = await client.read_holding_registers(int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE), SINGLE_REGISTER , self._slave_id)
+        # current_temperature_result = await client.read_holding_registers(int(RegisterAddresses.ROOM_TEMPERATURE_RD), SINGLE_REGISTER, self._slave_id)
+        self._current_temperature = self.register_store.registers[int(RegisterAddresses.ROOM_TEMPERATURE_RD)] / 10
+
+        # target_temperature_result = await client.read_holding_registers(int(RegisterAddresses.CURRENT_SETTING_TEMPERATURE_RD), SINGLE_REGISTER, self._slave_id)
+        self._target_temperature = self.register_store.registers[int(RegisterAddresses.CURRENT_SETTING_TEMPERATURE_RD)] / 10
+
+        # cur_preset_mode = await client.read_holding_registers(int(RegisterAddresses.CURRENT_OPERATION_MODE_RD), SINGLE_REGISTER, self._slave_id)
+        self._preset_mode = PRESET_MODES[self.register_store.registers[int(RegisterAddresses.CURRENT_OPERATION_MODE_RD)]]
+
+        # onoff_state = await client.read_holding_registers(int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE), SINGLE_REGISTER , self._slave_id)
+        onoff_state = self.register_store.registers[int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE)]
         match onoff_state:
             case 1:
                 self._hvac_mode = HVACMode.HEAT
             case 0:
                 self._hvac_mode = HVACMode.OFF
 
-        client.close()                                   # Disconnect device
+        # client.close()                                   # Disconnect device

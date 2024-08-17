@@ -7,11 +7,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
 
 from .const import DOMAIN
+from .heatmiser_edge import *
 
 # List of platforms to support. There should be a matching .py file for each,
 # eg <cover.py> and <sensor.py>
 # PLATFORMS = [Platform.CLIMATE, Platform.NUMBER]
-PLATFORMS = [Platform.CLIMATE]
+PLATFORMS = [Platform.CLIMATE, Platform.NUMBER, Platform.TIME]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # with your actual devices.
     # hass.data.setdefault(DOMAIN, {})[entry.entry_id] = hub.Hub(hass, entry.data["host"])
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = None
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = heatmiser_edge_register_store(entry.data["host"])
 
     # This creates each HA object for each platform your device requires.
     # It's done by calling the `async_setup_entry` function in each platform module.
