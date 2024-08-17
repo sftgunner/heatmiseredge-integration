@@ -12,6 +12,8 @@ from .heatmiser_edge import *
 
 from homeassistant.components.number import (
     NumberEntity,
+    NumberDeviceClass,
+    NumberMode,
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
@@ -92,6 +94,12 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
 
         self._native_value = None
 
+        self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+        self._attr_mode = NumberMode.BOX
+        self._attr_device_class = NumberDeviceClass.TEMPERATURE
+        self._attr_native_step = 0.5
+
+
         if port != 502:
             _LOGGER.error("Support not added for ports other than 502")
 
@@ -125,9 +133,6 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         """Return the current temperature."""
         return self._native_value
 
-    @property
-    def mode(self):
-        return "box"
 
     async def async_set_native_value(self,value: float) -> None:
         """Update the current value."""

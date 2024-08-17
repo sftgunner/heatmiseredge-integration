@@ -132,7 +132,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
 
     async def async_set_value(self,value: time) -> None:
         """Update the current value."""
-        _LOGGER.warning("Attempting to set native value")
+        _LOGGER.warning(f"Attempting to set time to {int(value.hour)}:{int(value.minute)}")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
         await client.write_register(self._register_id, int(value.hour) , self._slave_id)
@@ -149,7 +149,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         # self._current_temperature = value_result.registers[0]/10
 
         # client.close()
-        if self.register_store.registers[self._register_id] != None:
-            self._native_value = time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
-        else:
+        if self.register_store.registers[self._register_id] in (None, 24):
             self._native_value = None
+        else:
+            self._native_value = time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
