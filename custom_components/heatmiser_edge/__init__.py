@@ -23,7 +23,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # with your actual devices.
     # hass.data.setdefault(DOMAIN, {})[entry.entry_id] = hub.Hub(hass, entry.data["host"])
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = heatmiser_edge_register_store(entry.data["host"])
+    register_store = heatmiser_edge_register_store(entry.data["host"],entry.data["port"],entry.data["modbus_id"])
+
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = register_store
+
+    await register_store.async_update() # Make sure values are all up to date
 
     # This creates each HA object for each platform your device requires.
     # It's done by calling the `async_setup_entry` function in each platform module.

@@ -4,11 +4,12 @@ from pymodbus.client import AsyncModbusTcpClient
 _LOGGER = logging.getLogger(__name__)
 
 class heatmiser_edge_register_store:
-    def __init__(self, host) -> None:
+    def __init__(self, host, port, modbus_id) -> None:
         _LOGGER.warning("Initialising Register store")
         self.registers = [None] * 218
-        self._slave_id = 1 # TO CHANGE
+        self._slave_id = modbus_id # TO CHANGE
         self._host = host
+        self._port = port
 
     async def async_update(self) -> None:
         _LOGGER.warning("Updating register store")
