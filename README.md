@@ -6,10 +6,15 @@
 
 TBD
 
+Uses https://www.waveshare.com/wiki/RS485_TO_POE_ETH_(B) to bridge MODBUS connection.
+
 ### Configuration
 
-TBD
+Configuration has recently changed! I will update these instructions soon...
 
 ## Features
 
-- None yet, watch this space!
+- Temperature set, including override, schedule mode, and frost protection mode
+- Editable schedule
+- Configurable keylock
+- Thermostat diagnostics
