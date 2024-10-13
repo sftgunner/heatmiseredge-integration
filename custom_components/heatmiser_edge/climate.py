@@ -158,7 +158,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
                 
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE), OnOffValue , self._slave_id)
+        await client.write_register(int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE), value=OnOffValue , slave=self._slave_id)
         client.close()
 
         self._hvac_mode = hvac_mode
@@ -167,7 +167,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         """Set new target preset mode."""
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(RegisterAddresses.CURRENT_OPERATION_MODE), int(PRESET_MODES.index(preset_mode)), self._slave_id)
+        await client.write_register(int(RegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index(preset_mode)), slave=self._slave_id)
         client.close()
 
         self._preset_mode = preset_mode
@@ -185,9 +185,9 @@ class HeatmiserEdgeThermostat(ClimateEntity):
 
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(RegisterAddresses.CURRENT_OPERATION_MODE), int(PRESET_MODES.index("Override")) , self._slave_id)
-        await client.write_register(int(RegisterAddresses.HOLD_SET_TEMPERATURE), int(temperature)*10, self._slave_id)
-        await client.write_register(int(RegisterAddresses.ADVANCED_SET_TEMPERATURE), int(temperature)*10, self._slave_id)
+        await client.write_register(int(RegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Override")) , slave=self._slave_id)
+        await client.write_register(int(RegisterAddresses.HOLD_SET_TEMPERATURE), value=int(temperature)*10, slave=self._slave_id)
+        await client.write_register(int(RegisterAddresses.ADVANCED_SET_TEMPERATURE), value=int(temperature)*10, slave=self._slave_id)
         client.close()
 
         self._target_temperature = int(temperature)

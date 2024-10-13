@@ -126,7 +126,7 @@ class HeatmiserEdgeClearTimePeriodButton(ButtonEntity):
         _LOGGER.warning("Attempting to clear time period")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, int(24) , self._slave_id)
+        await client.write_register(self._register_id, value=int(24) , slave=self._slave_id)
         client.close()
 
         self.register_store.registers[self._register_id] = int(24)

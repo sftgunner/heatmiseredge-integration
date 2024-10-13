@@ -141,8 +141,8 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         _LOGGER.warning(f"Attempting to set time to {int(value.hour)}:{int(value.minute)}")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, int(value.hour) , self._slave_id)
-        await client.write_register(self._register_id+1, int(value.minute) , self._slave_id)
+        await client.write_register(self._register_id, value=int(value.hour) , slave=self._slave_id)
+        await client.write_register(self._register_id+1, value=int(value.minute) , slave=self._slave_id)
         client.close()
 
         self._native_value = value

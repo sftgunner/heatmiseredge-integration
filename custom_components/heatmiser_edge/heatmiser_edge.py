@@ -20,10 +20,10 @@ class heatmiser_edge_register_store:
 
         # Seems like the most amount of registers we can update at a time is 10
         for i in range(0,210,10):
-            result = await client.read_holding_registers(i, 10, self._slave_id)     # get information from device
+            result = await client.read_holding_registers(i, count=10, slave=self._slave_id)     # get information from device
             register_updated_values[i:i+10] = result.registers
 
-        result = await client.read_holding_registers(210, 8, self._slave_id)     # Do last 8 seperately
+        result = await client.read_holding_registers(210, count=8, slave=self._slave_id)     # Do last 8 seperately
         register_updated_values[210:218] = result.registers
         client.close()
         self.registers = register_updated_values
