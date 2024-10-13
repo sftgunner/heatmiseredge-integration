@@ -56,6 +56,7 @@ async def async_setup_entry(
         {"name": "Output delay", "register": 22, "gain": 1, "offset": 0, "units": "minutes"},
         {"name": "Pre-heat limit (optimum start)", "register": 26, "gain": 1, "offset": 0, "units": "hours"},
         {"name": "Keylock Password (0 to clear)", "register": 41, "gain": 1, "offset": 0, "units": ""},
+        {"name": "Schedule mode", "register": 28, "gain": 1, "offset": 0, "units": ""},
     ]
 
     for rg in register_lookup:
