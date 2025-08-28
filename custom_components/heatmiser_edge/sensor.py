@@ -50,34 +50,24 @@ async def async_setup_entry(
 
     ReadableRegisters = []
 
-    # register_map = {
-    #     "Code version number": 0,
-    #     "Relay status": 1, # Should be a binary_sensor
-    #     "Time period (current)": 9,
-    #     "Time period (next scheduled)": 10,
-    #     "Daylight saving status": 11, # Should be a binary_sensor
-    #     "Rate of Change": 12, # Add specific units
-    #     "Board sensor temp (raw)": 14, # Add scaling and units
-    #     "Board sensor temp (calib)": 15, # Add scaling and units
-    #     "Switching differential": 21, # Add scaling and units, should be editable
-    #     "Output delay": 22, # Add units, should be editable
-    #     "Pre-heat limit (optimum start)": 26 # Add units hrs, should be editable
-    # }
-
     register_lookup = [
-        {"name": "Code version number", "register": 0, "gain": 1, "offset": 0, "units": ""},
-        {"name": "Time period (current)", "register": 9, "gain": 1, "offset": 0, "units": ""},
-        {"name": "Time period (next scheduled)", "register": 10, "gain": 1, "offset": 0, "units": ""},
-        {"name": "Rate of Change", "register": 12, "gain": 1, "offset": 0, "units": "mins per degC"},
-        {"name": "Board sensor temp (raw)", "register": 14, "gain": 10, "offset": 0, "units": UnitOfTemperature.CELSIUS},
-        {"name": "Board sensor temp (calib)", "register": 15, "gain": 10, "offset": 0, "units": UnitOfTemperature.CELSIUS},
+        {"name": "Code version number", "register": RegisterAddresses[register_store.device_type].CODE_VERSION_NUMBER_RD, "gain": 1, "offset": 0, "units": ""},
+        {"name": "Time period (current)", "register": RegisterAddresses[register_store.device_type].CURRENT_SCHEDULE_RD, "gain": 1, "offset": 0, "units": ""},
+        {"name": "Time period (next scheduled)", "register": RegisterAddresses[register_store.device_type].NEXT_SCHEDULE_RD, "gain": 1, "offset": 0, "units": ""},
     ]
+    # Add device specific writable registers
+    if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+        register_lookup.append({"name": "Rate of Change", "register": 12, "gain": 1, "offset": 0, "units": "mins per degC"})
+        register_lookup.append({"name": "Board sensor temp (raw)", "register": 14, "gain": 10, "offset": 0, "units": UnitOfTemperature.CELSIUS})
+        register_lookup.append({"name": "Board sensor temp (calib)", "register": 15, "gain": 10, "offset": 0, "units": UnitOfTemperature.CELSIUS})
+    elif register_store.device_type == DEVICE_TYPE_TIMER:
+        # No device specific writable registers for the timer
+        register_lookup.append({"name": "Current operation mode (timer)", "register": 8, "gain": 1, "offset": 0, "units": ""})
+        pass
+
 
     for rg in register_lookup:
         ReadableRegisters.append(HeatmiserEdgeReadableRegisterGeneric(host, port, slave_id, name, register_store, rg["register"], rg["name"], rg["gain"], rg["offset"], rg["units"]))
-
-    # for registername, register_num in register_map.items():
-    #     ReadableRegisters.append(HeatmiserEdgeReadableRegisterGeneric(host, port, slave_id, name, register_store, register_num, registername))
 
     # Add all entities to HA
     async_add_entities(ReadableRegisters)

@@ -47,7 +47,7 @@ async def async_setup_entry(
     slave_id = config_entry.data["modbus_id"]
     name = config_entry.data["name"]
 
-    # register_id = int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE)
+    # register_id = int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE)
 
     ScheduleTempRegisters = []
 
@@ -72,8 +72,6 @@ async def async_setup_entry(
 
     # Add all entities to HA
     async_add_entities(ScheduleTempRegisters)
-
-
 
 
 class HeatmiserEdgeClearTimePeriodButton(ButtonEntity):

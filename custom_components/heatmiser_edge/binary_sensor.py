@@ -50,30 +50,13 @@ async def async_setup_entry(
 
     ReadableRegisters = []
 
-    # register_map = {
-    #     "Code version number": 0,
-    #     "Relay status": 1, # Should be a binary_sensor
-    #     "Time period (current)": 9,
-    #     "Time period (next scheduled)": 10,
-    #     "Daylight saving status": 11, # Should be a binary_sensor
-    #     "Rate of Change": 12, # Add specific units
-    #     "Board sensor temp (raw)": 14, # Add scaling and units
-    #     "Board sensor temp (calib)": 15, # Add scaling and units
-    #     "Switching differential": 21, # Add scaling and units, should be editable
-    #     "Output delay": 22, # Add units, should be editable
-    #     "Pre-heat limit (optimum start)": 26 # Add units hrs, should be editable
-    # }
-
     register_lookup = [
-        {"name": "Relay status", "register": 1},
-        {"name": "Daylight saving status", "register": 11},
+        {"name": "Relay status", "register": RegisterAddresses[register_store.device_type].RELAY_STATUS_RD},
+        {"name": "Daylight saving status", "register": RegisterAddresses[register_store.device_type].DAYLIGHT_SAVING_STATUS_RD},
     ]
 
     for rg in register_lookup:
         ReadableRegisters.append(HeatmiserEdgeReadableRegisterBinary(host, port, slave_id, name, register_store, rg["register"], rg["name"]))
-
-    # for registername, register_num in register_map.items():
-    #     ReadableRegisters.append(HeatmiserEdgeReadableRegisterGeneric(host, port, slave_id, name, register_store, register_num, registername))
 
     # Add all entities to HA
     async_add_entities(ReadableRegisters)

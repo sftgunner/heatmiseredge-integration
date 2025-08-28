@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
-from datetime import time
+from datetime import time as datetime_time
 
 import voluptuous as vol
 
@@ -48,7 +48,7 @@ async def async_setup_entry(
     slave_id = config_entry.data["modbus_id"]
     name = config_entry.data["name"]
 
-    # register_id = int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE)
+    # register_id = int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE)
 
     ScheduleTempRegisters = []
 
@@ -128,7 +128,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         if self.register_store.registers[self._register_id] in (None, 24):
             self._native_value = None
         else:
-            self._native_value = time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
+            self._native_value = datetime_time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
 
         return self._native_value
 

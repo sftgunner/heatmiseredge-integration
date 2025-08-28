@@ -50,39 +50,77 @@ async def async_setup_entry(
     name = config_entry.data["name"]
 
     GenericWritableRegisters = []
+    
+    # Set up writeable registers that applies for both thermostat and timer
 
     register_lookup = [
-        {"name": "Switching differential", "register": 21, "gain": 10, "offset": 0, "units": UnitOfTemperature.CELSIUS},
-        {"name": "Output delay", "register": 22, "gain": 1, "offset": 0, "units": "minutes"},
-        {"name": "Pre-heat limit (optimum start)", "register": 26, "gain": 1, "offset": 0, "units": "hours"},
-        {"name": "Keylock Password (0 to clear)", "register": 41, "gain": 1, "offset": 0, "units": ""},
         {"name": "Schedule mode", "register": 28, "gain": 1, "offset": 0, "units": ""},
     ]
-
+    # Add device specific writable registers
+    if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+        register_lookup.append({
+            "name": "Switching differential", 
+            "register": RegisterAddresses[register_store.device_type].SWITCHING_DIFFERENTIAL_RD, 
+            "gain": 10, 
+            "offset": 0, 
+            "units": UnitOfTemperature.CELSIUS
+            })
+        register_lookup.append({
+            "name": "Output delay", 
+            "register": RegisterAddresses[register_store.device_type].OUTPUT_DELAY_RD, 
+            "gain": 1, 
+            "offset": 0, 
+            "units": "minutes"
+            })
+        register_lookup.append({
+            "name": "Pre-heat limit (optimum start)", 
+            "register": RegisterAddresses[register_store.device_type].PREHEAT_LIMIT_RD, 
+            "gain": 1, 
+            "offset": 0, 
+            "units": "hours"
+            })
+        register_lookup.append({
+            "name": "Keylock Password (0 to clear)", 
+            "register": RegisterAddresses[register_store.device_type].KEYLOCK_PASSWORD, 
+            "gain": 1, 
+            "offset": 0, 
+            "units": ""
+            })
+    elif register_store.device_type == DEVICE_TYPE_TIMER:
+        # No device specific writable registers for the timer
+        register_lookup.append({
+            "name": "Operation mode (temporary)", 
+            "register": RegisterAddresses[register_store.device_type].CURRENT_OPERATION_MODE, 
+            "gain": 1, 
+            "offset": 0, 
+            "units": ""
+            })
+        # pass
+    
     for rg in register_lookup:
         GenericWritableRegisters.append(HeatmiserEdgeWritableRegisterGeneric(host, port, slave_id, name, register_store, rg["register"], rg["name"], rg["gain"], rg["offset"], rg["units"]))
     # Add all entities to HA
     async_add_entities(GenericWritableRegisters)
 
+    if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+        ScheduleTempRegisters = []
 
-    ScheduleTempRegisters = []
+        schedule_register_map = {
+            "1Mon": 76,
+            "2Tue": 100,
+            "3Wed": 124,
+            "4Thu": 148,
+            "5Fri": 172,
+            "6Sat": 196,
+            "7Sun": 52
+        }
 
-    schedule_register_map = {
-        "1Mon": 76,
-        "2Tue": 100,
-        "3Wed": 124,
-        "4Thu": 148,
-        "5Fri": 172,
-        "6Sat": 196,
-        "7Sun": 52
-    }
+        for dayname, startingregister in schedule_register_map.items():
+            for i in range(0,4):
+                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_store, startingregister+(i*4), f"{dayname} Period{i+1} Temp"))
 
-    for dayname, startingregister in schedule_register_map.items():
-        for i in range(0,4):
-            ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_store, startingregister+(i*4), f"{dayname} Period{i+1} Temp"))
-
-    # Add all entities to HA
-    async_add_entities(ScheduleTempRegisters)
+        # Add all entities to HA
+        async_add_entities(ScheduleTempRegisters)
 
 
 
@@ -161,6 +199,8 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
         client.close()
 
         self._native_value = int(value)
+        
+        await self.register_store.async_update()  # Force an update to ensure HA shows the correct value
 
 
 class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
@@ -233,3 +273,5 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         client.close()
 
         self._native_value = int(value)
+        
+        await self.register_store.async_update()  # Force an update to ensure HA shows the correct value
