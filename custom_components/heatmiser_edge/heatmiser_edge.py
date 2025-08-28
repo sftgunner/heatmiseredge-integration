@@ -1,4 +1,5 @@
 import logging
+from typing import Callable, List
 from pymodbus.client import AsyncModbusTcpClient
 from .const import *
 import time
@@ -14,6 +15,7 @@ class heatmiser_edge_register_store:
         self._slave_id = modbus_id # TO CHANGE
         self._host = host
         self._port = port
+        self._update_listeners: List[Callable[[], None]] = []
 
     async def async_update(self) -> None:
         _LOGGER.warning("Updating register store for device %s at %s", self._slave_id, self._host)
@@ -44,6 +46,9 @@ class heatmiser_edge_register_store:
         await self.async_update_device_time()  # Ensure the device time is correct
         # NB This shouldn't be checked this often as it involves writing to the device
         # Ideally only once a day should be enough
+        
+        # Notify listeners (HA entities) that new data is available
+        self._notify_update_listeners()
             
     async def async_update_device_time(self) -> None:
         
@@ -76,3 +81,22 @@ class heatmiser_edge_register_store:
                 client.close()
                 self.time_of_last_update = current_time
         
+    def add_update_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
+        """Register a listener that will be called after each successful update.
+        Returns a function that, when called, removes the listener.
+        """
+        self._update_listeners.append(listener)
+        def _remove() -> None:
+            try:
+                self._update_listeners.remove(listener)
+            except ValueError:
+                pass
+        return _remove
+
+    def _notify_update_listeners(self) -> None:
+        """Notify all registered listeners that an update occurred."""
+        for listener in list(self._update_listeners):
+            try:
+                listener()
+            except Exception as exc:  # pragma: no cover
+                _LOGGER.debug("Update listener raised: %s", exc)

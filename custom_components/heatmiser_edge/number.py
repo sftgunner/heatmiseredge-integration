@@ -145,6 +145,19 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
             _LOGGER.error("Support not added for ports other than 502")
 
 
+    async def async_added_to_hass(self) -> None:
+        """Register for updates from the register store when entity is added."""
+        self._remove_listener = self.register_store.add_update_listener(
+            lambda: self.async_schedule_update_ha_state(True)
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unregister update listener when entity is removed."""
+        remove = getattr(self, "_remove_listener", None)
+        if remove is not None:
+            remove()
+            self._remove_listener = None
+
     @property
     def device_info(self) -> DeviceInfo:
         """Return the device info"""
@@ -221,6 +234,19 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         if port != 502:
             _LOGGER.error("Support not added for ports other than 502")
 
+
+    async def async_added_to_hass(self) -> None:
+        """Register for updates from the register store when entity is added."""
+        self._remove_listener = self.register_store.add_update_listener(
+            lambda: self.async_schedule_update_ha_state(True)
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unregister update listener when entity is removed."""
+        remove = getattr(self, "_remove_listener", None)
+        if remove is not None:
+            remove()
+            self._remove_listener = None
 
     @property
     def device_info(self) -> DeviceInfo:
