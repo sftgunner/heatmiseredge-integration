@@ -22,7 +22,7 @@ class ThermostatRegisterAddresses(IntEnum):
     SWITCHING_DIFFERENTIAL_RD = 21
     OUTPUT_DELAY_RD = 22
     PREHEAT_LIMIT_RD = 26
-    SCHEDULE_MODE_RD = 28
+    SCHEDULE_MODE = 28
     DAYLIGHT_SAVING_STATUS = 29
     THERMOSTAT_ON_OFF_MODE = 31
     CURRENT_OPERATION_MODE = 32
@@ -50,6 +50,7 @@ class TimerRegisterAddresses(IntEnum):
     NEXT_SCHEDULE_RD = 4
     DAYLIGHT_SAVING_STATUS_RD = 5
     CURRENT_OPERATION_MODE_RD = 8     # ========= Writeable registers below this point =========
+    SCHEDULE_MODE = 28
     DAYLIGHT_SAVING_STATUS = 29
     THERMOSTAT_ON_OFF_MODE = 31 # This is physically turning the whole unit on or off
     CURRENT_OPERATION_MODE = 32
@@ -67,3 +68,40 @@ PRESET_MODES = ["Override","Schedule","Hold","Advance","Away","Frost protection"
 
 DEVICE_TYPE_THERMOSTAT = 0
 DEVICE_TYPE_TIMER = 1
+
+# ===== Select/Option lookups =====
+# These lists map integer register values to human-friendly strings
+# Index position corresponds to the integer value written/read from the device
+
+# Simple on/off mapping used for power and daylight saving flags
+ON_OFF_MODES = ["Off", "On"]
+
+SCHEDULE_MODES = [
+    "5/2",          # 0
+    "7 day",        # 1
+    "24 hour",      # 2
+    "No schedule"   # 3
+]
+
+# Thermostat temporary operation modes (index values must match device protocol)
+THERMOSTAT_OPERATION_MODES = [
+    "Override",          # 0
+    "Schedule",          # 1
+    "Hold",              # 2
+    "Advance",           # 3
+    "Away",              # 4
+    "Frost protection"   # 5
+]
+
+# Timer operation modes (index values must match device protocol). Kept simple.
+TIMER_OPERATION_MODES = [
+    "Override",          # 0
+    "Schedule",          # 1
+    "Hold",              # 2
+    "Advance",           # 3
+    "Away",              # 4
+    "Standby"            # 5
+]
+
+# Temperature format (if ever used)
+TEMP_FORMATS = ["Celsius", "Fahrenheit"]

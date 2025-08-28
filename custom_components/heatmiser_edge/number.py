@@ -53,9 +53,8 @@ async def async_setup_entry(
     
     # Set up writeable registers that applies for both thermostat and timer
 
-    register_lookup = [
-        {"name": "Schedule mode", "register": 28, "gain": 1, "offset": 0, "units": ""},
-    ]
+    register_lookup = []
+    
     # Add device specific writable registers
     if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
         register_lookup.append({
@@ -88,14 +87,7 @@ async def async_setup_entry(
             })
     elif register_store.device_type == DEVICE_TYPE_TIMER:
         # No device specific writable registers for the timer
-        register_lookup.append({
-            "name": "Operation mode (temporary)", 
-            "register": RegisterAddresses[register_store.device_type].CURRENT_OPERATION_MODE, 
-            "gain": 1, 
-            "offset": 0, 
-            "units": ""
-            })
-        # pass
+        pass
     
     for rg in register_lookup:
         GenericWritableRegisters.append(HeatmiserEdgeWritableRegisterGeneric(host, port, slave_id, name, register_store, rg["register"], rg["name"], rg["gain"], rg["offset"], rg["units"]))
