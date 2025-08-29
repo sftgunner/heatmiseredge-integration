@@ -50,35 +50,68 @@ async def async_setup_entry(
     name = config_entry.data["name"]
 
     GenericWritableRegisters = []
+    
+    # Set up writeable registers that applies for both thermostat and timer
 
-    register_lookup = [
-        {"name": "Switching differential", "register": 21, "gain": 10, "offset": 0, "units": UnitOfTemperature.CELSIUS},
-        {"name": "Output delay", "register": 22, "gain": 1, "offset": 0, "units": "minutes"},
-        {"name": "Pre-heat limit (optimum start)", "register": 26, "gain": 1, "offset": 0, "units": "hours"},
-        {"name": "Keylock Password (0 to clear)", "register": 41, "gain": 1, "offset": 0, "units": ""},
-    ]
-
+    register_lookup = []
+    
+    # Add device specific writable registers
+    if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+        register_lookup.append({
+            "name": "Switching differential", 
+            "register": RegisterAddresses[register_store.device_type].SWITCHING_DIFFERENTIAL_RD, 
+            "gain": 10, 
+            "offset": 0, 
+            "units": UnitOfTemperature.CELSIUS
+            })
+        register_lookup.append({
+            "name": "Output delay", 
+            "register": RegisterAddresses[register_store.device_type].OUTPUT_DELAY_RD, 
+            "gain": 1, 
+            "offset": 0, 
+            "units": "minutes"
+            })
+        register_lookup.append({
+            "name": "Pre-heat limit (optimum start)", 
+            "register": RegisterAddresses[register_store.device_type].PREHEAT_LIMIT_RD, 
+            "gain": 1, 
+            "offset": 0, 
+            "units": "hours"
+            })
+        register_lookup.append({
+            "name": "Keylock Password (0 to clear)", 
+            "register": RegisterAddresses[register_store.device_type].KEYLOCK_PASSWORD, 
+            "gain": 1, 
+            "offset": 0, 
+            "units": ""
+            })
+    elif register_store.device_type == DEVICE_TYPE_TIMER:
+        # No device specific writable registers for the timer
+        pass
+    
     for rg in register_lookup:
         GenericWritableRegisters.append(HeatmiserEdgeWritableRegisterGeneric(host, port, slave_id, name, register_store, rg["register"], rg["name"], rg["gain"], rg["offset"], rg["units"]))
     # Add all entities to HA
     async_add_entities(GenericWritableRegisters)
 
-
     ScheduleTempRegisters = []
-
     schedule_register_map = {
-        "1Mon": 76,
-        "2Tue": 100,
-        "3Wed": 124,
-        "4Thu": 148,
-        "5Fri": 172,
-        "6Sat": 196,
-        "7Sun": 52
+        "1Mon": RegisterAddresses[register_store.device_type].MONDAY_PERIOD_1_START_HOUR,
+        "2Tue": RegisterAddresses[register_store.device_type].TUESDAY_PERIOD_1_START_HOUR,
+        "3Wed": RegisterAddresses[register_store.device_type].WEDNESDAY_PERIOD_1_START_HOUR,
+        "4Thu": RegisterAddresses[register_store.device_type].THURSDAY_PERIOD_1_START_HOUR,
+        "5Fri": RegisterAddresses[register_store.device_type].FRIDAY_PERIOD_1_START_HOUR,
+        "6Sat": RegisterAddresses[register_store.device_type].SATURDAY_PERIOD_1_START_HOUR,
+        "7Sun": RegisterAddresses[register_store.device_type].SUNDAY_PERIOD_1_START_HOUR
     }
-
-    for dayname, startingregister in schedule_register_map.items():
-        for i in range(0,4):
-            ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_store, startingregister+(i*4), f"{dayname} Period{i+1} Temp"))
+    if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+        for dayname, startingregister in schedule_register_map.items():
+            for timeperiod in range(0,4):
+                temperature_register = startingregister + (timeperiod*4) + HOUR_TO_SETTEMP_REGISTER_OFFSET
+                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_store, temperature_register, f"{dayname} Period{timeperiod+1} Temp"))
+    elif register_store.device_type == DEVICE_TYPE_TIMER:
+        # No number entities for the timer
+        pass
 
     # Add all entities to HA
     async_add_entities(ScheduleTempRegisters)
@@ -94,7 +127,7 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
         self._port = port
         self._slave_id = slave_id
         self._register_id = register_id
-        self._name = f"{register_name}"
+        self._name = f"{name} {register_name}"
         self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
         self._gain = gain
@@ -113,6 +146,19 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
         if port != 502:
             _LOGGER.error("Support not added for ports other than 502")
 
+
+    async def async_added_to_hass(self) -> None:
+        """Register for updates from the register store when entity is added."""
+        self._remove_listener = self.register_store.add_update_listener(
+            lambda: self.async_schedule_update_ha_state(True)
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unregister update listener when entity is removed."""
+        remove = getattr(self, "_remove_listener", None)
+        if remove is not None:
+            remove()
+            self._remove_listener = None
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -156,10 +202,12 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
         _LOGGER.warning("Attempting to set native value")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, int(value)*self._gain , self._slave_id)
+        await client.write_register(self._register_id, value=int(value)*self._gain , slave=self._slave_id)
         client.close()
 
         self._native_value = int(value)
+        
+        await self.register_store.async_update()  # Force an update to ensure HA shows the correct value
 
 
 class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
@@ -171,7 +219,7 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         self._port = port
         self._slave_id = slave_id
         self._register_id = register_id
-        self._name = f"{register_name}"
+        self._name = f"{name} {register_name}"
         self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 
@@ -188,6 +236,19 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         if port != 502:
             _LOGGER.error("Support not added for ports other than 502")
 
+
+    async def async_added_to_hass(self) -> None:
+        """Register for updates from the register store when entity is added."""
+        self._remove_listener = self.register_store.add_update_listener(
+            lambda: self.async_schedule_update_ha_state(True)
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unregister update listener when entity is removed."""
+        remove = getattr(self, "_remove_listener", None)
+        if remove is not None:
+            remove()
+            self._remove_listener = None
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -228,7 +289,9 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         _LOGGER.warning("Attempting to set native value")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, int(value)*10 , self._slave_id)
+        await client.write_register(self._register_id, value=int(value)*10 , slave=self._slave_id)
         client.close()
 
         self._native_value = int(value)
+        
+        await self.register_store.async_update()  # Force an update to ensure HA shows the correct value

@@ -47,7 +47,7 @@ async def async_setup_entry(
     slave_id = config_entry.data["modbus_id"]
     name = config_entry.data["name"]
 
-    # register_id = int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE)
+    # register_id = int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE)
 
     ScheduleTempRegisters = []
 
@@ -74,8 +74,6 @@ async def async_setup_entry(
     async_add_entities(ScheduleTempRegisters)
 
 
-
-
 class HeatmiserEdgeClearTimePeriodButton(ButtonEntity):
     """Representation of a Heatmiser Edge thermostat."""
 
@@ -85,7 +83,7 @@ class HeatmiserEdgeClearTimePeriodButton(ButtonEntity):
         self._port = port
         self._slave_id = slave_id
         self._register_id = register_id
-        self._name = f"{register_name}"
+        self._name = f"{name} {register_name}"
         self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 
@@ -126,7 +124,7 @@ class HeatmiserEdgeClearTimePeriodButton(ButtonEntity):
         _LOGGER.warning("Attempting to clear time period")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, int(24) , self._slave_id)
+        await client.write_register(self._register_id, value=int(24) , slave=self._slave_id)
         client.close()
 
         self.register_store.registers[self._register_id] = int(24)

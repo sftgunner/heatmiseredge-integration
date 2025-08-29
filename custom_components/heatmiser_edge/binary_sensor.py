@@ -50,30 +50,13 @@ async def async_setup_entry(
 
     ReadableRegisters = []
 
-    # register_map = {
-    #     "Code version number": 0,
-    #     "Relay status": 1, # Should be a binary_sensor
-    #     "Time period (current)": 9,
-    #     "Time period (next scheduled)": 10,
-    #     "Daylight saving status": 11, # Should be a binary_sensor
-    #     "Rate of Change": 12, # Add specific units
-    #     "Board sensor temp (raw)": 14, # Add scaling and units
-    #     "Board sensor temp (calib)": 15, # Add scaling and units
-    #     "Switching differential": 21, # Add scaling and units, should be editable
-    #     "Output delay": 22, # Add units, should be editable
-    #     "Pre-heat limit (optimum start)": 26 # Add units hrs, should be editable
-    # }
-
     register_lookup = [
-        {"name": "Relay status", "register": 1},
-        {"name": "Daylight saving status", "register": 11},
+        {"name": "Relay status", "register": RegisterAddresses[register_store.device_type].RELAY_STATUS_RD},
+        {"name": "Daylight saving status", "register": RegisterAddresses[register_store.device_type].DAYLIGHT_SAVING_STATUS_RD},
     ]
 
     for rg in register_lookup:
         ReadableRegisters.append(HeatmiserEdgeReadableRegisterBinary(host, port, slave_id, name, register_store, rg["register"], rg["name"]))
-
-    # for registername, register_num in register_map.items():
-    #     ReadableRegisters.append(HeatmiserEdgeReadableRegisterGeneric(host, port, slave_id, name, register_store, register_num, registername))
 
     # Add all entities to HA
     async_add_entities(ReadableRegisters)
@@ -90,7 +73,7 @@ class HeatmiserEdgeReadableRegisterBinary(BinarySensorEntity):
         self._port = port
         self._slave_id = slave_id
         self._register_id = register_id
-        self._name = f"{register_name}"
+        self._name = f"{name} {register_name}"
         self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 
@@ -135,3 +118,16 @@ class HeatmiserEdgeReadableRegisterBinary(BinarySensorEntity):
         else:
             self._is_on = None
         return self._is_on
+
+    async def async_added_to_hass(self) -> None:
+        """Register for updates from the register store when entity is added."""
+        self._remove_listener = self.register_store.add_update_listener(
+            lambda: self.async_schedule_update_ha_state(True)
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unregister update listener when entity is removed."""
+        remove = getattr(self, "_remove_listener", None)
+        if remove is not None:
+            remove()
+            self._remove_listener = None

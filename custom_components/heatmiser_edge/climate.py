@@ -97,7 +97,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
             identifiers={(DOMAIN,self._id)},
                 name=self._device_name,
                 sw_version="1.0.0",
-                model="Edge",
+                model="Edge", # Ought to match this using the code version number
                 manufacturer="Heatmiser",
                 )
 
@@ -113,25 +113,25 @@ class HeatmiserEdgeThermostat(ClimateEntity):
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        self._current_temperature = self.register_store.registers[int(RegisterAddresses.ROOM_TEMPERATURE_RD)] / 10
+        self._current_temperature = self.register_store.registers[int(ThermostatRegisterAddresses.ROOM_TEMPERATURE_RD)] / 10
         return self._current_temperature
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        self._target_temperature = self.register_store.registers[int(RegisterAddresses.CURRENT_SETTING_TEMPERATURE_RD)] / 10
+        self._target_temperature = self.register_store.registers[int(ThermostatRegisterAddresses.CURRENT_SETTING_TEMPERATURE_RD)] / 10
         return self._target_temperature
 
     @property
     def preset_mode(self):
         """The current active preset"""
-        self._preset_mode = PRESET_MODES[self.register_store.registers[int(RegisterAddresses.CURRENT_OPERATION_MODE_RD)]]
+        self._preset_mode = PRESET_MODES[self.register_store.registers[int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE_RD)]]
         return self._preset_mode
 
     @property
     def hvac_mode(self):
         """The current mode (heat/off)"""
-        onoff_state = self.register_store.registers[int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE)]
+        onoff_state = self.register_store.registers[int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE)]
         match onoff_state:
             case 1:
                 self._hvac_mode = HVACMode.HEAT
@@ -158,7 +158,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
                 
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE), OnOffValue , self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE), value=OnOffValue , slave=self._slave_id)
         client.close()
 
         self._hvac_mode = hvac_mode
@@ -167,7 +167,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         """Set new target preset mode."""
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(RegisterAddresses.CURRENT_OPERATION_MODE), int(PRESET_MODES.index(preset_mode)), self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index(preset_mode)), slave=self._slave_id)
         client.close()
 
         self._preset_mode = preset_mode
@@ -185,9 +185,9 @@ class HeatmiserEdgeThermostat(ClimateEntity):
 
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(RegisterAddresses.CURRENT_OPERATION_MODE), int(PRESET_MODES.index("Override")) , self._slave_id)
-        await client.write_register(int(RegisterAddresses.HOLD_SET_TEMPERATURE), int(temperature)*10, self._slave_id)
-        await client.write_register(int(RegisterAddresses.ADVANCED_SET_TEMPERATURE), int(temperature)*10, self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Override")) , slave=self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.HOLD_SET_TEMPERATURE), value=int(temperature)*10, slave=self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.ADVANCED_SET_TEMPERATURE), value=int(temperature)*10, slave=self._slave_id)
         client.close()
 
         self._target_temperature = int(temperature)

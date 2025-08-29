@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
-from datetime import time
+from datetime import time as datetime_time
 
 import voluptuous as vol
 
@@ -47,29 +47,33 @@ async def async_setup_entry(
     port = config_entry.data["port"]
     slave_id = config_entry.data["modbus_id"]
     name = config_entry.data["name"]
-
-    # register_id = int(RegisterAddresses.THERMOSTAT_ON_OFF_MODE)
-
+    
+    # Add device specific writable registers
+    
     ScheduleTempRegisters = []
-
-    register_map = {
-        "1Mon": 74,
-        "2Tue": 98,
-        "3Wed": 122,
-        "4Thu": 146,
-        "5Fri": 170,
-        "6Sat": 194,
-        "7Sun": 50
+    # Days have to have the number first so they sort correctly in HA
+    schedule_register_map = {
+        "1Mon": RegisterAddresses[register_store.device_type].MONDAY_PERIOD_1_START_HOUR,
+        "2Tue": RegisterAddresses[register_store.device_type].TUESDAY_PERIOD_1_START_HOUR,
+        "3Wed": RegisterAddresses[register_store.device_type].WEDNESDAY_PERIOD_1_START_HOUR,
+        "4Thu": RegisterAddresses[register_store.device_type].THURSDAY_PERIOD_1_START_HOUR,
+        "5Fri": RegisterAddresses[register_store.device_type].FRIDAY_PERIOD_1_START_HOUR,
+        "6Sat": RegisterAddresses[register_store.device_type].SATURDAY_PERIOD_1_START_HOUR,
+        "7Sun": RegisterAddresses[register_store.device_type].SUNDAY_PERIOD_1_START_HOUR
     }
 
-    for dayname, startingregister in register_map.items():
-        for i in range(0,4):
-            ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTime(host, port, slave_id, name, register_store, startingregister+(i*4), f"{dayname} Period{i+1} StartTime"))
-    
-
-
-
-    # WritableRegister = HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_id, register_name)
+    if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+        for dayname, startingregister in schedule_register_map.items():
+            for timeperiod in range(0,4):
+                time_register = startingregister + (timeperiod*4)
+                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTime(host, port, slave_id, name, register_store, time_register, f"{dayname} Period{timeperiod+1} StartTime"))
+    elif register_store.device_type == DEVICE_TYPE_TIMER:
+        for dayname, startingregister in schedule_register_map.items():
+            for timeperiod in range(0,4):
+                time_register = startingregister + (timeperiod*4)
+                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTime(host, port, slave_id, name, register_store, time_register, f"{dayname} Period{timeperiod+1} 1ON")) # Have to have 1ON to ensure that ON shows before OFF in HA
+                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTime(host, port, slave_id, name, register_store, time_register + 2, f"{dayname} Period{timeperiod+1} 2OFF")) # Have to have 2OFF to ensure that ON shows before OFF in HA
+            
 
     # Add all entities to HA
     async_add_entities(ScheduleTempRegisters)
@@ -86,7 +90,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         self._port = port
         self._slave_id = slave_id
         self._register_id = register_id
-        self._name = f"{register_name}"
+        self._name = f"{name} {register_name}"
         self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 
@@ -128,7 +132,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         if self.register_store.registers[self._register_id] in (None, 24):
             self._native_value = None
         else:
-            self._native_value = time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
+            self._native_value = datetime_time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
 
         return self._native_value
 
@@ -141,11 +145,24 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         _LOGGER.warning(f"Attempting to set time to {int(value.hour)}:{int(value.minute)}")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, int(value.hour) , self._slave_id)
-        await client.write_register(self._register_id+1, int(value.minute) , self._slave_id)
+        await client.write_register(self._register_id, value=int(value.hour) , slave=self._slave_id)
+        await client.write_register(self._register_id+1, value=int(value.minute) , slave=self._slave_id)
         client.close()
 
         self._native_value = value
+
+    async def async_added_to_hass(self) -> None:
+        """Register for updates from the register store when entity is added."""
+        self._remove_listener = self.register_store.add_update_listener(
+            lambda: self.async_schedule_update_ha_state(True)
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unregister update listener when entity is removed."""
+        remove = getattr(self, "_remove_listener", None)
+        if remove is not None:
+            remove()
+            self._remove_listener = None
 
     # async def async_update(self) -> None:
     #     _LOGGER.warning("Attempting to update time (skipping)")

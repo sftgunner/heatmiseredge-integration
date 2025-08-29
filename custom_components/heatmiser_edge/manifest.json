@@ -7,5 +7,5 @@
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/sftgunner/heatmiser_edge-integration/issues",
     "requirements": ["modbus"],
-    "version": "0.0.1"
+    "version": "1.1.0"
 }
