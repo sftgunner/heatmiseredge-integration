@@ -47,29 +47,33 @@ async def async_setup_entry(
     port = config_entry.data["port"]
     slave_id = config_entry.data["modbus_id"]
     name = config_entry.data["name"]
-
-    # register_id = int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE)
-
+    
+    # Add device specific writable registers
+    
     ScheduleTempRegisters = []
-
-    register_map = {
-        "1Mon": 74,
-        "2Tue": 98,
-        "3Wed": 122,
-        "4Thu": 146,
-        "5Fri": 170,
-        "6Sat": 194,
-        "7Sun": 50
+    # Days have to have the number first so they sort correctly in HA
+    schedule_register_map = {
+        "1Mon": RegisterAddresses[register_store.device_type].MONDAY_PERIOD_1_START_HOUR,
+        "2Tue": RegisterAddresses[register_store.device_type].TUESDAY_PERIOD_1_START_HOUR,
+        "3Wed": RegisterAddresses[register_store.device_type].WEDNESDAY_PERIOD_1_START_HOUR,
+        "4Thu": RegisterAddresses[register_store.device_type].THURSDAY_PERIOD_1_START_HOUR,
+        "5Fri": RegisterAddresses[register_store.device_type].FRIDAY_PERIOD_1_START_HOUR,
+        "6Sat": RegisterAddresses[register_store.device_type].SATURDAY_PERIOD_1_START_HOUR,
+        "7Sun": RegisterAddresses[register_store.device_type].SUNDAY_PERIOD_1_START_HOUR
     }
 
-    for dayname, startingregister in register_map.items():
-        for i in range(0,4):
-            ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTime(host, port, slave_id, name, register_store, startingregister+(i*4), f"{dayname} Period{i+1} StartTime"))
-    
-
-
-
-    # WritableRegister = HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_id, register_name)
+    if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+        for dayname, startingregister in schedule_register_map.items():
+            for timeperiod in range(0,4):
+                time_register = startingregister + (timeperiod*4)
+                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTime(host, port, slave_id, name, register_store, time_register, f"{dayname} Period{timeperiod+1} StartTime"))
+    elif register_store.device_type == DEVICE_TYPE_TIMER:
+        for dayname, startingregister in schedule_register_map.items():
+            for timeperiod in range(0,4):
+                time_register = startingregister + (timeperiod*4)
+                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTime(host, port, slave_id, name, register_store, time_register, f"{dayname} Period{timeperiod+1} 1ON")) # Have to have 1ON to ensure that ON shows before OFF in HA
+                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTime(host, port, slave_id, name, register_store, time_register + 2, f"{dayname} Period{timeperiod+1} 2OFF")) # Have to have 2OFF to ensure that ON shows before OFF in HA
+            
 
     # Add all entities to HA
     async_add_entities(ScheduleTempRegisters)
@@ -86,7 +90,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         self._port = port
         self._slave_id = slave_id
         self._register_id = register_id
-        self._name = f"{register_name}"
+        self._name = f"{name} {register_name}"
         self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 

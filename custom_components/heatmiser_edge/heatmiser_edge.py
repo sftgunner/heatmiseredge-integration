@@ -11,7 +11,7 @@ class heatmiser_edge_register_store:
         _LOGGER.warning("Initialising Register store")
         self.registers = [None] * 218
         self.device_type = None
-        self.time_of_last_update = None
+        self.time_of_next_update = None
         self._slave_id = modbus_id # TO CHANGE
         self._host = host
         self._port = port
@@ -55,31 +55,31 @@ class heatmiser_edge_register_store:
         # Update daylight saving status first
         current_time = time.localtime()
         
-        if (self.time_of_last_update is not None):
-            if (current_time > (self.time_of_last_update + 86400)):
-                # Last update was more than a day ago, so update the time
-                
-                # Update the time on the device to match the time on the HA server
-                _LOGGER.warning("Updating time on device to match HA server time")
-                
-                is_dst = current_time.tm_isdst
+        if (self.time_of_next_update is None) or (current_time > (self.time_of_next_update)):
+            # Last update was more than a day ago, so update the time
+            
+            # Update the time on the device to match the time on the HA server
+            _LOGGER.warning("Updating time on device %d to match HA time", self._slave_id)
+            
+            is_dst = current_time.tm_isdst
 
-                year = current_time.tm_year
-                month_day = (current_time.tm_mon << 8) + current_time.tm_mday
-                hour_minute = (current_time.tm_hour << 8) + current_time.tm_min
-                second = current_time.tm_sec
-                _LOGGER.warning("Updating time on device to %d-%02d-%02d %02d:%02d:%02d", year, current_time.tm_mon, current_time.tm_mday, current_time.tm_hour, current_time.tm_min, current_time.tm_sec)
-                client = AsyncModbusTcpClient(self._host)
-                await client.connect()
-                if int(is_dst) != int(self.registers[int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS_RD)]):
-                    _LOGGER.warning("Updating daylight saving status on device to %d", is_dst)
-                    await client.write_register(int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS), value=int(is_dst), slave=self._slave_id)
-                await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_YEAR), value=year, slave=self._slave_id)
-                await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_MONTH_DAY), value=month_day, slave=self._slave_id)
-                await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_HOUR_MINUTE), value=hour_minute, slave=self._slave_id)
-                await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_SECOND), value=second, slave=self._slave_id)
-                client.close()
-                self.time_of_last_update = current_time
+            year = current_time.tm_year
+            month_day = (current_time.tm_mon << 8) + current_time.tm_mday
+            hour_minute = (current_time.tm_hour << 8) + current_time.tm_min
+            second = current_time.tm_sec
+            _LOGGER.warning("Updating time on device %d to %d-%02d-%02d %02d:%02d:%02d",self._slave_id, year, current_time.tm_mon, current_time.tm_mday, current_time.tm_hour, current_time.tm_min, current_time.tm_sec)
+            client = AsyncModbusTcpClient(self._host)
+            await client.connect()
+            if int(is_dst) != int(self.registers[int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS_RD)]):
+                _LOGGER.warning("Updating daylight saving status on device %d to %d", self._slave_id, is_dst)
+                await client.write_register(int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS), value=int(is_dst), slave=self._slave_id)
+            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_YEAR), value=year, slave=self._slave_id)
+            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_MONTH_DAY), value=month_day, slave=self._slave_id)
+            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_HOUR_MINUTE), value=hour_minute, slave=self._slave_id)
+            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_SECOND), value=second, slave=self._slave_id)
+            client.close()
+            
+            self.time_of_next_update = time.localtime(time.time() + 3600) # Set the next update to be in an hour
         
     def add_update_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
         """Register a listener that will be called after each successful update.

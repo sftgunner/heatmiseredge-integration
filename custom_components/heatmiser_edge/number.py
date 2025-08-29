@@ -94,25 +94,27 @@ async def async_setup_entry(
     # Add all entities to HA
     async_add_entities(GenericWritableRegisters)
 
+    ScheduleTempRegisters = []
+    schedule_register_map = {
+        "1Mon": RegisterAddresses[register_store.device_type].MONDAY_PERIOD_1_START_HOUR,
+        "2Tue": RegisterAddresses[register_store.device_type].TUESDAY_PERIOD_1_START_HOUR,
+        "3Wed": RegisterAddresses[register_store.device_type].WEDNESDAY_PERIOD_1_START_HOUR,
+        "4Thu": RegisterAddresses[register_store.device_type].THURSDAY_PERIOD_1_START_HOUR,
+        "5Fri": RegisterAddresses[register_store.device_type].FRIDAY_PERIOD_1_START_HOUR,
+        "6Sat": RegisterAddresses[register_store.device_type].SATURDAY_PERIOD_1_START_HOUR,
+        "7Sun": RegisterAddresses[register_store.device_type].SUNDAY_PERIOD_1_START_HOUR
+    }
     if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
-        ScheduleTempRegisters = []
-
-        schedule_register_map = {
-            "1Mon": 76,
-            "2Tue": 100,
-            "3Wed": 124,
-            "4Thu": 148,
-            "5Fri": 172,
-            "6Sat": 196,
-            "7Sun": 52
-        }
-
         for dayname, startingregister in schedule_register_map.items():
-            for i in range(0,4):
-                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_store, startingregister+(i*4), f"{dayname} Period{i+1} Temp"))
+            for timeperiod in range(0,4):
+                temperature_register = startingregister + (timeperiod*4) + HOUR_TO_SETTEMP_REGISTER_OFFSET
+                ScheduleTempRegisters.append(HeatmiserEdgeWritableRegisterTemp(host, port, slave_id, name, register_store, temperature_register, f"{dayname} Period{timeperiod+1} Temp"))
+    elif register_store.device_type == DEVICE_TYPE_TIMER:
+        # No number entities for the timer
+        pass
 
-        # Add all entities to HA
-        async_add_entities(ScheduleTempRegisters)
+    # Add all entities to HA
+    async_add_entities(ScheduleTempRegisters)
 
 
 
@@ -125,7 +127,7 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
         self._port = port
         self._slave_id = slave_id
         self._register_id = register_id
-        self._name = f"{register_name}"
+        self._name = f"{name} {register_name}"
         self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
         self._gain = gain
@@ -217,7 +219,7 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         self._port = port
         self._slave_id = slave_id
         self._register_id = register_id
-        self._name = f"{register_name}"
+        self._name = f"{name} {register_name}"
         self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 

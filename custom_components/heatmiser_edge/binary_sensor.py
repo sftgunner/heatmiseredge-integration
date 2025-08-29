@@ -73,7 +73,7 @@ class HeatmiserEdgeReadableRegisterBinary(BinarySensorEntity):
         self._port = port
         self._slave_id = slave_id
         self._register_id = register_id
-        self._name = f"{register_name}"
+        self._name = f"{name} {register_name}"
         self._device_name = name
         self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 

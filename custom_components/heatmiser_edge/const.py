@@ -34,13 +34,13 @@ class ThermostatRegisterAddresses(IntEnum):
     SYNCHRONOUS_RTC_MONTH_DAY = 47
     SYNCHRONOUS_RTC_HOUR_MINUTE = 48
     SYNCHRONOUS_RTC_SECOND = 49
-    MONDAY_PERIOD_1_START_HOUR = 76
-    TUESDAY_PERIOD_1_START_HOUR = 100
-    WEDNESDAY_PERIOD_1_START_HOUR = 124
-    THURSDAY_PERIOD_1_START_HOUR = 148
-    FRIDAY_PERIOD_1_START_HOUR = 172
-    SATURDAY_PERIOD_1_START_HOUR = 196
-    SUNDAY_PERIOD_1_START_HOUR = 52
+    MONDAY_PERIOD_1_START_HOUR = 74
+    TUESDAY_PERIOD_1_START_HOUR = 98
+    WEDNESDAY_PERIOD_1_START_HOUR = 122
+    THURSDAY_PERIOD_1_START_HOUR = 146
+    FRIDAY_PERIOD_1_START_HOUR = 170
+    SATURDAY_PERIOD_1_START_HOUR = 194
+    SUNDAY_PERIOD_1_START_HOUR = 50
     
 class TimerRegisterAddresses(IntEnum):
     CODE_VERSION_NUMBER_RD = 0
@@ -59,10 +59,19 @@ class TimerRegisterAddresses(IntEnum):
     SYNCHRONOUS_RTC_MONTH_DAY = 47
     SYNCHRONOUS_RTC_HOUR_MINUTE = 48
     SYNCHRONOUS_RTC_SECOND = 49
+    MONDAY_PERIOD_1_START_HOUR = 66
+    TUESDAY_PERIOD_1_START_HOUR = 82
+    WEDNESDAY_PERIOD_1_START_HOUR = 98
+    THURSDAY_PERIOD_1_START_HOUR = 114
+    FRIDAY_PERIOD_1_START_HOUR = 130
+    SATURDAY_PERIOD_1_START_HOUR = 146
+    SUNDAY_PERIOD_1_START_HOUR = 50
     
 RegisterAddresses = [ThermostatRegisterAddresses, TimerRegisterAddresses]
 
 SINGLE_REGISTER = 1
+
+HOUR_TO_SETTEMP_REGISTER_OFFSET = 2  # Offset from start of period time register to the corresponding temperature register
 
 PRESET_MODES = ["Override","Schedule","Hold","Advance","Away","Frost protection"] # Override is known as "change over" in docs
 
@@ -77,10 +86,10 @@ DEVICE_TYPE_TIMER = 1
 ON_OFF_MODES = ["Off", "On"]
 
 SCHEDULE_MODES = [
-    "5/2",          # 0
-    "7 day",        # 1
-    "24 hour",      # 2
-    "No schedule"   # 3
+    "Weekday/Weekend",   # 0
+    "7 day",             # 1
+    "24 hour",           # 2
+    "No schedule"        # 3
 ]
 
 # Thermostat temporary operation modes (index values must match device protocol)
@@ -95,11 +104,11 @@ THERMOSTAT_OPERATION_MODES = [
 
 # Timer operation modes (index values must match device protocol). Kept simple.
 TIMER_OPERATION_MODES = [
-    "Override",          # 0
+    "Override",          # 0 (Doesn't seem to work on timer)
     "Schedule",          # 1
-    "Hold",              # 2
+    "Hold",              # 2 (I think has to have hold time set to work)
     "Advance",           # 3
-    "Away",              # 4
+    "Away",              # 4 (I think has to have return time set to work)
     "Standby"            # 5
 ]
 

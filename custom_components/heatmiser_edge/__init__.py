@@ -13,8 +13,8 @@ from .heatmiser_edge import *
 # eg <cover.py> and <sensor.py>
 # PLATFORMS = [Platform.CLIMATE, Platform.NUMBER]
 PLATFORMS_THERMOSTAT = [Platform.CLIMATE, Platform.NUMBER, Platform.TIME, Platform.BUTTON, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT]
-PLATFORMS_TIMER = [Platform.SWITCH, Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SENSOR, Platform.SELECT]
-PLATFORMS_ALL = [Platform.CLIMATE, Platform.NUMBER, Platform.TIME, Platform.BUTTON, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SWITCH, Platform.SELECT]
+PLATFORMS_TIMER = [Platform.SWITCH, Platform.NUMBER, Platform.TIME, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT]
+PLATFORMS_ALL = [Platform.CLIMATE, Platform.SWITCH, Platform.NUMBER, Platform.TIME, Platform.BUTTON, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT]
 
 _LOGGER = logging.getLogger(__name__)
 
