@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, scrolledtext, filedialog
 from pymodbus.client import ModbusTcpClient
 import os
+import time
 
 REGISTER_COUNT = 218
 RESTORE_START = 21
