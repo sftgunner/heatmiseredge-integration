@@ -58,7 +58,7 @@ Additional utilities are provided in the `tools/` directory:
 ## Development
 
 - See [`custom_components/heatmiser_edge`](custom_components/heatmiser_edge) for source code.
-- Issues and contributions: [GitHub Issue Tracker](https://github.com/sftgunner/heatmiser_edge-integration/issues)
+- Issues and contributions: [GitHub Issue Tracker](https://github.com/sftgunner/heatmiseredge-integration/issues)
 
 ## License
 
