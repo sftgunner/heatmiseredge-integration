@@ -159,7 +159,7 @@ class HeatmiserEdgeSelectableRegister(SelectEntity):
 
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, value=int(index), slave=self._slave_id)
+        await client.write_register(self._register_id, value=int(index), device_id=self._slave_id)
         client.close()
 
         await self.register_store.async_update()

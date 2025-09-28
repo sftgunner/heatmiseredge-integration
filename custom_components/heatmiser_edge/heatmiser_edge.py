@@ -28,10 +28,10 @@ class heatmiser_edge_register_store:
 
         # Seems like the most amount of registers we can update at a time is 10
         for i in range(0,210,MAX_REGISTER_UPDATE_COUNT):
-            result = await client.read_holding_registers(i, count=MAX_REGISTER_UPDATE_COUNT, slave=self._slave_id)     # get information from device
+            result = await client.read_holding_registers(i, count=MAX_REGISTER_UPDATE_COUNT, device_id=self._slave_id)     # get information from device
             register_updated_values[i:i+MAX_REGISTER_UPDATE_COUNT] = result.registers
 
-        result = await client.read_holding_registers(210, count=8, slave=self._slave_id)     # Do last 8 seperately
+        result = await client.read_holding_registers(210, count=8, device_id=self._slave_id)     # Do last 8 seperately
         register_updated_values[210:218] = result.registers
         client.close()
         self.registers = register_updated_values
@@ -72,11 +72,11 @@ class heatmiser_edge_register_store:
             await client.connect()
             if int(is_dst) != int(self.registers[int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS_RD)]):
                 _LOGGER.warning("Updating daylight saving status on device %d to %d", self._slave_id, is_dst)
-                await client.write_register(int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS), value=int(is_dst), slave=self._slave_id)
-            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_YEAR), value=year, slave=self._slave_id)
-            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_MONTH_DAY), value=month_day, slave=self._slave_id)
-            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_HOUR_MINUTE), value=hour_minute, slave=self._slave_id)
-            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_SECOND), value=second, slave=self._slave_id)
+                await client.write_register(int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS), value=int(is_dst), device_id=self._slave_id)
+            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_YEAR), value=year, device_id=self._slave_id)
+            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_MONTH_DAY), value=month_day, device_id=self._slave_id)
+            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_HOUR_MINUTE), value=hour_minute, device_id=self._slave_id)
+            await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_SECOND), value=second, device_id=self._slave_id)
             client.close()
             
             self.time_of_next_update = time.localtime(time.time() + 3600) # Set the next update to be in an hour
