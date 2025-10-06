@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import logging
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.const import Platform, CONF_HOST, CONF_PORT
+import voluptuous as vol
+from homeassistant.helpers import device_registry as dr
+# from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.entity import DeviceInfo
 
 from .const import *
 from .heatmiser_edge import *
@@ -17,6 +21,62 @@ PLATFORMS_TIMER = [Platform.SWITCH, Platform.NUMBER, Platform.TIME, Platform.SEN
 PLATFORMS_ALL = [Platform.CLIMATE, Platform.SWITCH, Platform.NUMBER, Platform.TIME, Platform.BUTTON, Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT]
 
 _LOGGER = logging.getLogger(__name__)
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up is called when Home Assistant is loading our component."""
+    # Important that the service action is registered in this function to ensure that it still responds with a helpful error if no config entry is set up
+
+    async def write_register(call: ServiceCall) -> None:
+        """Handle the service call to write a register."""
+        _LOGGER.warning(f"[DEBUG] write_register service called with data: {call.data}")
+        # if not call.target:
+        #     raise ValueError("No target device specified")
+            
+        device_registry = dr.async_get(hass)
+        
+        # Handle both device_id and device formats
+        # device_ids = []
+        # if "device_id" in call.target:
+        #     device_ids.append(call.target["device_id"])
+        # elif "device" in call.target:
+        #     device_ids.extend(call.target["device"])
+        
+        device_ids = call.data.get("device_id")
+        
+        for device_id in device_ids:
+            _LOGGER.warning(f"[DEBUG] Processing device_id: {device_id}")
+            
+            device_entry = device_registry.async_get(device_id)
+            if not device_entry:
+                raise ValueError(f"Device {device_id} not found")
+                
+            # Find the config entry for this device
+            config_entry_id = next(iter(device_entry.config_entries))
+            register_store = hass.data[DOMAIN].get(config_entry_id)
+            
+            if not register_store:
+                raise ValueError(f"Device {device_id} is not a Heatmiser Edge device")
+            
+            register = call.data.get("register")
+            value = call.data.get("value")
+            _LOGGER.warning(f"[DEBUG] Service call to write register {register} with value {value} for device {device_id}")
+            
+            await register_store.write_register(register, value)
+
+    # Register the service
+    hass.services.async_register(
+        DOMAIN,
+        "write_register",
+        write_register
+        # schema=vol.Schema({
+        #     vol.Required("device_id"): None,
+        #     vol.Required("register"): int,
+        #     vol.Required("value"): int,
+        # })
+    )
+
+    # Return boolean to indicate that initialization was successful.
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -48,6 +108,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         _LOGGER.error(f"Unable to detect device type for {entry.data['host']} channel {entry.data['modbus_id']}. Not loading any platforms")
         return False
+    
     return True
 
 

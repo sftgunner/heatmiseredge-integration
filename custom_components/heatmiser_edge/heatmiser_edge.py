@@ -16,6 +16,18 @@ class heatmiser_edge_register_store:
         self._host = host
         self._port = port
         self._update_listeners: List[Callable[[], None]] = []
+        
+    async def write_register(self, register: int, value: int) -> None:
+        client = AsyncModbusTcpClient(self._host)
+        await client.connect()
+        """Write a value to a specific register."""
+        try:
+            await client.write_register(int(register), value=int(value), device_id=self._slave_id)
+            client.close()
+        except Exception as ex:
+            client.close()
+            _LOGGER.error(f"Error writing to register {register}: {ex}")
+            raise
 
     async def async_update(self) -> None:
         _LOGGER.warning("Updating register store for device %s at %s", self._slave_id, self._host)
@@ -100,3 +112,29 @@ class heatmiser_edge_register_store:
                 listener()
             except Exception as exc:  # pragma: no cover
                 _LOGGER.debug("Update listener raised: %s", exc)
+
+# class HeatmiserDevice:
+#     def __init__(self, host, port, modbus_id) -> None:
+#         _LOGGER.warning("Initialising Device")
+#         self._host = host
+#         self._port = port
+#         self._slave_id = modbus_id # TO CHANGE
+#         self._update_store = heatmiser_edge_register_store(host, port, modbus_id)
+#         self._update_store._host = self._host
+#         self._update_store._port = self._port
+#         self._update_store._slave_id = self._slave_id
+
+#     async def async_update(self) -> None:
+#         await self._update_store.async_update()
+
+#     async def write_register(self, register: int, value: int) -> None:
+#         """Write a value to a specific register."""
+#         try:
+#             await self.client.write_register(
+#                 slave_addr=self.slave_address,
+#                 register_addr=register,
+#                 value=value
+#             )
+#         except Exception as ex:
+#             _LOGGER.error(f"Error writing to register {register}: {ex}")
+#             raise
