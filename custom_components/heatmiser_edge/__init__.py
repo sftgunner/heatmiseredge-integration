@@ -25,7 +25,10 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up is called when Home Assistant is loading our component."""
     # Important that the service action is registered in this function to ensure that it still responds with a helpful error if no config entry is set up
-
+    
+    # TODO: Add service to force register to be refreshed
+    # TODO: Add service to bulk write to multiple registers at once
+    
     async def write_register(call: ServiceCall) -> None:
         """Handle the service call to write a register."""
         _LOGGER.warning(f"[DEBUG] write_register service called with data: {call.data}")
@@ -58,6 +61,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 raise ValueError(f"Device {device_id} is not a Heatmiser Edge device")
             
             register = call.data.get("register")
+            if register < 50 or register > 217:
+                raise ValueError("Register must be between 50 and 217 (schedule area)")
+            
             value = call.data.get("value")
             _LOGGER.warning(f"[DEBUG] Service call to write register {register} with value {value} for device {device_id}")
             

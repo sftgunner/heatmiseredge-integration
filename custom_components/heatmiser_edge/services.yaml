@@ -7,12 +7,12 @@ write_register:
   fields:
     register:
       name: Register
-      description: The register address to write to
+      description: The register address to write to (0 indexed)
       required: true
       selector:
         number:
-          min: 0
-          max: 65535
+          min: 50
+          max: 217
           mode: box
     value:
       name: Value
