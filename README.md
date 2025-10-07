@@ -38,6 +38,40 @@ See [`custom_components/heatmiser_edge/config_flow.py`](custom_components/heatmi
 - **Keylock Configuration**: Set or clear keylock password.
 - **Entity Types**: Climate, Number, Time, Button, Sensor, Binary Sensor, Switch, Select.
 
+## Services
+
+The integration provides the following services:
+
+### Write Register
+Write a single value to a specific register on a Heatmiser Edge device.
+
+```yaml
+service: heatmiser_edge.write_register
+target:
+  device:
+    - device_id_here
+data:
+  register: 100  # Register address (50-217)
+  value: 1      # Value to write (0-65535)
+  refresh_values_after_writing: true  # Optional, defaults to false
+```
+
+### Write Register Range
+Write multiple values to consecutive registers starting from a specific address.
+
+```yaml
+service: heatmiser_edge.write_register_range
+target:
+  device:
+    - device_id_here
+data:
+  register: 100          # Starting register address (50-217)
+  values: "1,2,3,4,5"   # Comma-separated values to write
+  refresh_values_after_writing: true  # Optional, defaults to false
+```
+
+**Note**: Register writes are restricted to the schedule area (registers 50-217) for safety.
+
 ## Tools
 
 Additional utilities are provided in the `tools/` directory:
@@ -45,6 +79,10 @@ Additional utilities are provided in the `tools/` directory:
 - [`tools/backup_and_restore.py`](tools/backup_and_restore.py): Command-line tool to backup and restore all Modbus registers.
 - [`tools/backup_and_restore_gui.py`](tools/backup_and_restore_gui.py): GUI tool for register backup/restore.
 - [`tools/modbus_gui.py`](tools/modbus_gui.py): GUI tool to decode and display register files using built-in register maps.
+
+## Frontend interface (custom card)
+
+Please see https://github.com/sftgunner/heatmiser-edge-frontend
 
 ## Example Devices
 

@@ -17,7 +17,7 @@ class heatmiser_edge_register_store:
         self._port = port
         self._update_listeners: List[Callable[[], None]] = []
         
-    async def write_register(self, register: int, value: int) -> None:
+    async def write_register(self, register: int, value: int, refresh_values_after_writing: bool) -> None:
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
         """Write a value to a specific register."""
@@ -28,6 +28,27 @@ class heatmiser_edge_register_store:
             client.close()
             _LOGGER.error(f"Error writing to register {register}: {ex}")
             raise
+        if refresh_values_after_writing:
+            await self.async_update()  # Refresh register values after writing
+        
+    async def write_register_range(self, start_register: int, values: List[int], refresh_values_after_writing: bool) -> None:
+        client = AsyncModbusTcpClient(self._host)
+        await client.connect()
+        """Write a range of values starting from a specific register."""
+        # Write data in chunks of up to 10 registers at a time
+        MAX_REGISTER_WRITE_COUNT = 10
+        try:
+            for chunk_start_register_idx in range(0, len(values), MAX_REGISTER_WRITE_COUNT):
+                chunk_end_register_idx = min(chunk_start_register_idx + MAX_REGISTER_WRITE_COUNT, len(values))
+                chunk = values[chunk_start_register_idx:chunk_end_register_idx]
+                await client.write_registers(int(start_register) + chunk_start_register_idx, chunk, device_id=self._slave_id)
+            client.close()
+        except Exception as ex:
+            client.close()
+            _LOGGER.error(f"Error writing to registers starting at {start_register}: {ex}")
+            raise
+        if refresh_values_after_writing:
+            await self.async_update()  # Refresh register values after writing
 
     async def async_update(self) -> None:
         _LOGGER.warning("Updating register store for device %s at %s", self._slave_id, self._host)
