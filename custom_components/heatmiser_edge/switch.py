@@ -60,9 +60,9 @@ class HeatmiserEdgeTimer(SwitchEntity):
         self._slave_id = slave_id
         self._name = f"{name} timer"
         self._device_name = name
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}"
         self._is_on = False
         self.register_store = register_store
+        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
 
         if port != 502:
             _LOGGER.error("Support not added for ports other than 502")
