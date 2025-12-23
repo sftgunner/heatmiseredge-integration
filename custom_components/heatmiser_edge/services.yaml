@@ -1,0 +1,61 @@
+write_register:
+  name: Write Register
+  description: Write a value to a specific register on a Heatmiser Edge device
+  target:
+    device:
+      integration: heatmiser_edge
+  fields:
+    register:
+      name: Register
+      description: The register address to write to (0 indexed)
+      required: true
+      selector:
+        number:
+          min: 50
+          max: 217
+          mode: box
+    value:
+      name: Value
+      description: The value to write to the register
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    refresh_values_after_writing:
+      name: Refresh values after writing
+      description: Whether to refresh the values from the device after writing (may take a few seconds)
+      required: false
+      selector:
+        boolean:
+write_register_range:
+  name: Write Register Range
+  description: Write a value to a range of registers on a Heatmiser Edge device
+  target:
+    device:
+      integration: heatmiser_edge
+  fields:
+    register:
+      name: Starting register
+      description: The starting register address to write to (0 indexed)
+      required: true
+      selector:
+        number:
+          min: 50
+          max: 217
+          mode: box
+    values:
+      name: Value
+      description: Values to write to registers (comma separated values, e.g. 123,456,789)
+      example: "123,456,789"
+      required: true
+      selector:
+        text:
+          autocomplete: "false"
+    refresh_values_after_writing:
+      name: Refresh values after writing
+      description: Whether to refresh the values from the device after writing (may take a few seconds)
+      required: false
+      selector:
+        boolean:

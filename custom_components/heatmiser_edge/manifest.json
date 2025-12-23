@@ -3,9 +3,9 @@
     "name": "Heatmiser Edge Thermostat",
     "codeowners": ["@sftgunner"],
     "config_flow": true,
-    "documentation": "https://github.com/sftgunner/heatmiser_edge-integration",
+    "documentation": "https://github.com/sftgunner/heatmiseredge-integration",
     "iot_class": "local_polling",
-    "issue_tracker": "https://github.com/sftgunner/heatmiser_edge-integration/issues",
+    "issue_tracker": "https://github.com/sftgunner/heatmiseredge-integration/issues",
     "requirements": ["modbus"],
-    "version": "1.1.0"
+    "version": "1.3.0"
 }

@@ -86,9 +86,10 @@ class HeatmiserEdgeReadableRegisterGeneric(SensorEntity):
         self._register_id = register_id
         self._name = f"{name} {register_name}"
         self._device_name = name
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}"
 
         self.register_store = register_store
+        
+        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
 
         self._native_value = None
 
