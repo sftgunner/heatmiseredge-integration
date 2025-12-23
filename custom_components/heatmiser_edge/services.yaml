@@ -2,9 +2,14 @@ write_register:
   name: Write Register
   description: Write a value to a specific register on a Heatmiser Edge device
   target:
-    device:
-      - integration: heatmiser_edge
   fields:
+    device:
+      name: Device
+      description: The Heatmiser Edge device to write to
+      required: true
+      selector:
+        device:
+          integration: heatmiser_edge
     register:
       name: Register
       description: The register address to write to (0 indexed)
@@ -33,9 +38,14 @@ write_register_range:
   name: Write Register Range
   description: Write a value to a range of registers on a Heatmiser Edge device
   target:
-    device:
-      - integration: heatmiser_edge
   fields:
+    device:
+      name: Device
+      description: The Heatmiser Edge device to write to
+      required: true
+      selector:
+        device:
+          integration: heatmiser_edge
     register:
       name: Starting register
       description: The starting register address to write to (0 indexed)
