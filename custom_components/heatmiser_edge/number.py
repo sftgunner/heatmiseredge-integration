@@ -202,7 +202,7 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
         _LOGGER.warning("Attempting to set native value")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, value=int(value)*self._gain , slave=self._slave_id)
+        await client.write_register(self._register_id, value=int(value)*self._gain , device_id=self._slave_id)
         client.close()
 
         self._native_value = int(value)
@@ -289,7 +289,7 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         _LOGGER.warning("Attempting to set native value")
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(self._register_id, value=int(value)*10 , slave=self._slave_id)
+        await client.write_register(self._register_id, value=int(value)*10 , device_id=self._slave_id)
         client.close()
 
         self._native_value = int(value)

@@ -100,8 +100,8 @@ class HeatmiserEdgeTimer(SwitchEntity):
         # Add your Modbus write logic here to turn on the timer
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Advance")) , slave=self._slave_id) # Override also known as "change over" in docs
-        await client.write_register(int(TimerRegisterAddresses.TIMER_OUT_FORCE), value=1, slave=self._slave_id)
+        await client.write_register(int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Advance")) , device_id=self._slave_id) # Override also known as "change over" in docs
+        await client.write_register(int(TimerRegisterAddresses.TIMER_OUT_FORCE), value=1, device_id=self._slave_id)
         client.close()
 
         await self.async_update() # Force an update
@@ -112,8 +112,8 @@ class HeatmiserEdgeTimer(SwitchEntity):
         # Add your Modbus write logic here to turn off the timer
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Advance")) , slave=self._slave_id) # Override also known as "change over" in docs
-        await client.write_register(int(TimerRegisterAddresses.TIMER_OUT_FORCE), value=0, slave=self._slave_id)
+        await client.write_register(int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Advance")) , device_id=self._slave_id) # Override also known as "change over" in docs
+        await client.write_register(int(TimerRegisterAddresses.TIMER_OUT_FORCE), value=0, device_id=self._slave_id)
         client.close()
         
         await self.async_update() # Force an update

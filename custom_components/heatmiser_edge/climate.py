@@ -158,7 +158,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
                 
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE), value=OnOffValue , slave=self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE), value=OnOffValue , device_id=self._slave_id)
         client.close()
 
         self._hvac_mode = hvac_mode
@@ -167,7 +167,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         """Set new target preset mode."""
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index(preset_mode)), slave=self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index(preset_mode)), device_id=self._slave_id)
         client.close()
 
         self._preset_mode = preset_mode
@@ -185,9 +185,9 @@ class HeatmiserEdgeThermostat(ClimateEntity):
 
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
-        await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Override")) , slave=self._slave_id)
-        await client.write_register(int(ThermostatRegisterAddresses.HOLD_SET_TEMPERATURE), value=int(temperature)*10, slave=self._slave_id)
-        await client.write_register(int(ThermostatRegisterAddresses.ADVANCED_SET_TEMPERATURE), value=int(temperature)*10, slave=self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Override")) , device_id=self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.HOLD_SET_TEMPERATURE), value=int(temperature)*10, device_id=self._slave_id)
+        await client.write_register(int(ThermostatRegisterAddresses.ADVANCED_SET_TEMPERATURE), value=int(temperature)*10, device_id=self._slave_id)
         client.close()
 
         self._target_temperature = int(temperature)

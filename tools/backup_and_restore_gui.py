@@ -144,6 +144,7 @@ class ModbusApp:
             return
 
         self.log("Restoring writable registers 21–217...")
+        # NOTE TO FUTURE SEB, OUGHT TO MAKE SURE THAT YOU DON'T OVERWRITE THE REGISTER CONTAINING THE MODBUS ID (31 WHEN IN TIMER)
         self.write_registers(client, slave_id, values)
         client.close()
         self.log("Restore complete.")
