@@ -3,7 +3,7 @@ write_register:
   description: Write a value to a specific register on a Heatmiser Edge device
   target:
     device:
-      integration: heatmiser_edge
+      - integration: heatmiser_edge
   fields:
     register:
       name: Register
@@ -34,7 +34,7 @@ write_register_range:
   description: Write a value to a range of registers on a Heatmiser Edge device
   target:
     device:
-      integration: heatmiser_edge
+      - integration: heatmiser_edge
   fields:
     register:
       name: Starting register
