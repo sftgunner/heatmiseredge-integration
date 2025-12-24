@@ -8,7 +8,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class heatmiser_edge_register_store:
     def __init__(self, host, port, modbus_id) -> None:
-        _LOGGER.warning("Initialising Register store")
+        _LOGGER.debug("Initialising Register store")
         self.registers = [None] * 218
         self.device_type = None
         self.time_of_next_update = None
@@ -51,7 +51,7 @@ class heatmiser_edge_register_store:
             await self.async_update()  # Refresh register values after writing
 
     async def async_update(self) -> None:
-        _LOGGER.warning("Updating register store for device %s at %s", self._slave_id, self._host)
+        _LOGGER.debug("Updating register store for device %s at %s", self._slave_id, self._host)
         client = AsyncModbusTcpClient(self._host)
         await client.connect()
 
@@ -92,7 +92,7 @@ class heatmiser_edge_register_store:
             # Last update was more than a day ago, so update the time
             
             # Update the time on the device to match the time on the HA server
-            _LOGGER.warning("Updating time on device %d to match HA time", self._slave_id)
+            _LOGGER.debug("Updating time on device %d to match HA time", self._slave_id)
             
             is_dst = current_time.tm_isdst
 
@@ -100,11 +100,11 @@ class heatmiser_edge_register_store:
             month_day = (current_time.tm_mon << 8) + current_time.tm_mday
             hour_minute = (current_time.tm_hour << 8) + current_time.tm_min
             second = current_time.tm_sec
-            _LOGGER.warning("Updating time on device %d to %d-%02d-%02d %02d:%02d:%02d",self._slave_id, year, current_time.tm_mon, current_time.tm_mday, current_time.tm_hour, current_time.tm_min, current_time.tm_sec)
+            _LOGGER.info("Updating time on device %d to %d-%02d-%02d %02d:%02d:%02d",self._slave_id, year, current_time.tm_mon, current_time.tm_mday, current_time.tm_hour, current_time.tm_min, current_time.tm_sec)
             client = AsyncModbusTcpClient(self._host)
             await client.connect()
             if int(is_dst) != int(self.registers[int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS_RD)]):
-                _LOGGER.warning("Updating daylight saving status on device %d to %d", self._slave_id, is_dst)
+                _LOGGER.info("Updating daylight saving status on device %d to %d", self._slave_id, is_dst)
                 await client.write_register(int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS), value=int(is_dst), device_id=self._slave_id)
             await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_YEAR), value=year, device_id=self._slave_id)
             await client.write_register(int(RegisterAddresses[self.device_type].SYNCHRONOUS_RTC_MONTH_DAY), value=month_day, device_id=self._slave_id)

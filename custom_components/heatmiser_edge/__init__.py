@@ -31,7 +31,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     
     async def write_register(call: ServiceCall) -> None:
         """Handle the service call to write a register."""
-        _LOGGER.warning(f"[DEBUG] write_register service called with data: {call.data}")
+        _LOGGER.debug(f"[DEBUG] write_register service called with data: {call.data}")
         # if not call.target:
         #     raise ValueError("No target device specified")
             
@@ -47,7 +47,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         device_ids = call.data.get("device_id")
         
         for device_id in device_ids:
-            _LOGGER.warning(f"[DEBUG] Processing device_id: {device_id}")
+            _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
             
             device_entry = device_registry.async_get(device_id)
             if not device_entry:
@@ -68,13 +68,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             refresh_values_after_writing = call.data.get("refresh_values_after_writing",False)
             
-            _LOGGER.warning(f"[DEBUG] Service call to write register {register} with value {value} for device {device_id}")
+            _LOGGER.debug(f"[DEBUG] Service call to write register {register} with value {value} for device {device_id}")
             
             await register_store.write_register(register, value, refresh_values_after_writing)
             
     async def write_register_range(call: ServiceCall) -> None:
         """Handle the service call to write a range of registers."""
-        _LOGGER.warning(f"[DEBUG] write_register_range service called with data: {call.data}")
+        _LOGGER.debug(f"[DEBUG] write_register_range service called with data: {call.data}")
         # if not call.target:
         #     raise ValueError("No target device specified")
             
@@ -83,7 +83,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         device_ids = call.data.get("device_id")
         
         for device_id in device_ids:
-            _LOGGER.warning(f"[DEBUG] Processing device_id: {device_id}")
+            _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
             
             device_entry = device_registry.async_get(device_id)
             if not device_entry:
@@ -111,7 +111,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             if start_register + len(values) - 1 > 217:
                 raise ValueError("Register range exceeds schedule area (max register 217)")
             
-            _LOGGER.warning(f"[DEBUG] Service call to write registers starting at {start_register} with values {values} for device {device_id}")
+            _LOGGER.debug(f"[DEBUG] Service call to write registers starting at {start_register} with values {values} for device {device_id}")
             
             await register_store.write_register_range(start_register, values, refresh_values_after_writing)
 
