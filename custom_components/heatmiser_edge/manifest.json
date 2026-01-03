@@ -7,5 +7,5 @@
     "iot_class": "local_polling",
     "issue_tracker": "https://github.com/sftgunner/heatmiseredge-integration/issues",
     "requirements": ["modbus"],
-    "version": "1.3.1"
+    "version": "1.4.0"
 }

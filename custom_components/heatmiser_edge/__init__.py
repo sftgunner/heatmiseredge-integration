@@ -115,6 +115,146 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             await register_store.write_register_range(start_register, values, refresh_values_after_writing)
 
+    async def boost_thermostat_heating(call: ServiceCall) -> None:
+        """Handle the service call to temporarily boost thermostat heating."""
+        _LOGGER.debug(f"[DEBUG] boost_thermostat_heating service called with data: {call.data}")
+        
+        device_registry = dr.async_get(hass)
+        device_ids = call.data.get("device_id")
+        
+        for device_id in device_ids:
+            _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
+            
+            device_entry = device_registry.async_get(device_id)
+            if not device_entry:
+                raise ValueError(f"Device {device_id} not found")
+                
+            # Find the config entry for this device
+            config_entry_id = next(iter(device_entry.config_entries))
+            register_store = hass.data[DOMAIN].get(config_entry_id)
+            
+            if not register_store:
+                raise ValueError(f"Device {device_id} is not a Heatmiser Edge device")
+            
+            if register_store.device_type != DEVICE_TYPE_THERMOSTAT:
+                raise ValueError(f"Device {device_id} is not a thermostat")
+            
+            # Get service parameters
+            temperature = call.data.get("temperature")
+            duration_hours = call.data.get("duration_hours", 0)
+            duration_minutes = call.data.get("duration_minutes", 0)
+            
+            # Validate parameters
+            if not 5 <= temperature <= 35:
+                raise ValueError("Temperature must be between 5 and 35 degrees Celsius")
+            if not 0 <= duration_hours <= 99:
+                raise ValueError("Duration hours must be between 0 and 99")
+            if not 0 <= duration_minutes <= 59:
+                raise ValueError("Duration minutes must be between 0 and 59")
+            
+            _LOGGER.info(f"Boosting thermostat {device_id} to {temperature}°C for {duration_hours}h{duration_minutes}m")
+            
+            try:
+                # Step 1: Sync time to device
+                await register_store.async_update_device_time()
+                
+                # Step 2: Update hold time register (HOLDTIME_HOUR_MIN)
+                # High 8 bits = hours, low 8 bits = minutes
+                hold_time_value = (duration_hours << 8) | duration_minutes
+                await register_store.write_register(
+                    int(ThermostatRegisterAddresses.HOLDTIME_HOUR_MIN),
+                    hold_time_value,
+                    refresh_values_after_writing=False
+                )
+                
+                # Step 3: Update hold set temperature register
+                # Temperature is scaled by factor of 10 (20°C = 200)
+                temp_register_value = int(temperature * 10)
+                await register_store.write_register(
+                    int(ThermostatRegisterAddresses.HOLD_SET_TEMPERATURE),
+                    temp_register_value,
+                    refresh_values_after_writing=False
+                )
+                
+                # Step 4: Change operation mode to Hold
+                # "Hold" is at index 2 in PRESET_MODES
+                await register_store.write_register(
+                    int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE),
+                    2,  # Hold mode
+                    refresh_values_after_writing=True
+                )
+            except Exception as ex:
+                _LOGGER.error(f"Error boosting thermostat: {ex}")
+                raise
+
+    async def boost_timer_output(call: ServiceCall) -> None:
+        """Handle the service call to temporarily boost timer output."""
+        _LOGGER.debug(f"[DEBUG] boost_timer_output service called with data: {call.data}")
+        
+        device_registry = dr.async_get(hass)
+        device_ids = call.data.get("device_id")
+        
+        for device_id in device_ids:
+            _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
+            
+            device_entry = device_registry.async_get(device_id)
+            if not device_entry:
+                raise ValueError(f"Device {device_id} not found")
+                
+            # Find the config entry for this device
+            config_entry_id = next(iter(device_entry.config_entries))
+            register_store = hass.data[DOMAIN].get(config_entry_id)
+            
+            if not register_store:
+                raise ValueError(f"Device {device_id} is not a Heatmiser Edge device")
+            
+            if register_store.device_type != DEVICE_TYPE_TIMER:
+                raise ValueError(f"Device {device_id} is not a timer")
+            
+            # Get service parameters
+            state = call.data.get("state")
+            duration_hours = call.data.get("duration_hours", 0)
+            duration_minutes = call.data.get("duration_minutes", 0)
+            
+            # Validate parameters
+            if not 0 <= duration_hours <= 99:
+                raise ValueError("Duration hours must be between 0 and 99")
+            if not 0 <= duration_minutes <= 59:
+                raise ValueError("Duration minutes must be between 0 and 59")
+            
+            _LOGGER.info(f"Boosting timer {device_id} to {state} for {duration_hours}h{duration_minutes}m")
+            
+            try:
+                # Step 1: Sync time to device
+                await register_store.async_update_device_time()
+                
+                # Step 2: Update hold time register (HOLDTIME_HOUR_MIN)
+                # High 8 bits = hours, low 8 bits = minutes
+                hold_time_value = (duration_hours << 8) | duration_minutes
+                await register_store.write_register(
+                    int(TimerRegisterAddresses.HOLDTIME_HOUR_MIN),
+                    hold_time_value,
+                    refresh_values_after_writing=False
+                )
+                
+                # Step 3: Update timer out force register with boolean state
+                await register_store.write_register(
+                    int(TimerRegisterAddresses.TIMER_OUT_FORCE),
+                    1 if state else 0,
+                    refresh_values_after_writing=False
+                )
+                
+                # Step 4: Change operation mode to Hold
+                # "Hold" is at index 2 in PRESET_MODES
+                await register_store.write_register(
+                    int(TimerRegisterAddresses.CURRENT_OPERATION_MODE),
+                    2,  # Hold mode
+                    refresh_values_after_writing=True
+                )
+            except Exception as ex:
+                _LOGGER.error(f"Error boosting timer: {ex}")
+                raise
+
     # Register the service
     hass.services.async_register(
         DOMAIN,
@@ -138,6 +278,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         #     vol.Required("register"): int,
         #     vol.Required("value"): int,
         # })
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "boost_thermostat_heating",
+        boost_thermostat_heating
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "boost_timer_output",
+        boost_timer_output
     )
 
     # Return boolean to indicate that initialization was successful.
