@@ -44,7 +44,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         # elif "device" in call.target:
         #     device_ids.extend(call.target["device"])
         
-        device_ids = call.data.get("device_id")
+        device_ids = call.data.get("device")
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
         
         for device_id in device_ids:
             _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
@@ -80,7 +82,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
         device_registry = dr.async_get(hass)
         
-        device_ids = call.data.get("device_id")
+        device_ids = call.data.get("device")
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
         
         for device_id in device_ids:
             _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
@@ -120,7 +124,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         _LOGGER.debug(f"[DEBUG] boost_thermostat_heating service called with data: {call.data}")
         
         device_registry = dr.async_get(hass)
-        device_ids = call.data.get("device_id")
+        device_ids = call.data.get("device")
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
         
         for device_id in device_ids:
             _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
@@ -192,7 +198,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         _LOGGER.debug(f"[DEBUG] boost_timer_output service called with data: {call.data}")
         
         device_registry = dr.async_get(hass)
-        device_ids = call.data.get("device_id")
+        device_ids = call.data.get("device")
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
         
         for device_id in device_ids:
             _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
