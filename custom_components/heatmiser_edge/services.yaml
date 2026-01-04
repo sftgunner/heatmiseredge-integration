@@ -67,3 +67,82 @@ write_register_range:
       required: false
       selector:
         boolean:
+boost_thermostat_heating:
+  name: Boost Thermostat Heating
+  description: Temporarily boost the thermostat to a specific temperature for a set duration
+  fields:
+    device:
+      name: Device
+      description: The Heatmiser Edge thermostat device to boost
+      required: true
+      selector:
+        device:
+          integration: heatmiser_edge
+    temperature:
+      name: Target Temperature
+      description: The desired temperature to override to (in degrees Celsius)
+      required: true
+      selector:
+        number:
+          min: 5
+          max: 35
+          mode: slider
+          step: 0.1
+          unit_of_measurement: "°C"
+    duration_hours:
+      name: Duration (hours)
+      description: How long the boost should be active (0-99 hours)
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 99
+          mode: box
+          step: 1
+    duration_minutes:
+      name: Duration (minutes)
+      description: Additional minutes for the boost duration (0-59)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 59
+          mode: box
+          step: 1
+boost_timer_output:
+  name: Boost Timer Output
+  description: Temporarily set the timer output on or off for a set duration
+  fields:
+    device:
+      name: Device
+      description: The Heatmiser Edge timer device to boost
+      required: true
+      selector:
+        device:
+          integration: heatmiser_edge
+    state:
+      name: Output State
+      description: Whether to turn the timer output on or off
+      required: true
+      selector:
+        boolean:
+    duration_hours:
+      name: Duration (hours)
+      description: How long the boost should be active (0-99 hours)
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 99
+          mode: box
+          step: 1
+    duration_minutes:
+      name: Duration (minutes)
+      description: Additional minutes for the boost duration (0-59)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 59
+          mode: box
+          step: 1
