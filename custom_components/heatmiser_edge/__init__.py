@@ -9,6 +9,7 @@ import voluptuous as vol
 from homeassistant.helpers import device_registry as dr
 # from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.exceptions import ServiceValidationError
 
 from .const import *
 from .heatmiser_edge import *
@@ -53,18 +54,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             device_entry = device_registry.async_get(device_id)
             if not device_entry:
-                raise ValueError(f"Device {device_id} not found")
+                raise ServiceValidationError(f"Device {device_id} not found")
                 
             # Find the config entry for this device
             config_entry_id = next(iter(device_entry.config_entries))
             register_store = hass.data[DOMAIN].get(config_entry_id)
             
             if not register_store:
-                raise ValueError(f"Device {device_id} is not a Heatmiser Edge device")
+                raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
             
             register = call.data.get("register")
             if register < 50 or register > 217:
-                raise ValueError("Register must be between 50 and 217 (schedule area)")
+                raise ServiceValidationError("Register must be between 50 and 217 (schedule area)")
             
             value = call.data.get("value")
             
@@ -91,18 +92,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             device_entry = device_registry.async_get(device_id)
             if not device_entry:
-                raise ValueError(f"Device {device_id} not found")
+                raise ServiceValidationError(f"Device {device_id} not found")
                 
             # Find the config entry for this device
             config_entry_id = next(iter(device_entry.config_entries))
             register_store = hass.data[DOMAIN].get(config_entry_id)
             
             if not register_store:
-                raise ValueError(f"Device {device_id} is not a Heatmiser Edge device")
+                raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
             
             start_register = call.data.get("register")
             if start_register < 50 or start_register > 217:
-                raise ValueError("Start register must be between 50 and 217 (schedule area)")
+                raise ServiceValidationError("Start register must be between 50 and 217 (schedule area)")
             
             valuesString = call.data.get("values")
             values = valuesString.split(",")
@@ -113,7 +114,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             refresh_values_after_writing = call.data.get("refresh_values_after_writing",False)
             
             if start_register + len(values) - 1 > 217:
-                raise ValueError("Register range exceeds schedule area (max register 217)")
+                raise ServiceValidationError("Register range exceeds schedule area (max register 217)")
             
             _LOGGER.debug(f"[DEBUG] Service call to write registers starting at {start_register} with values {values} for device {device_id}")
             
@@ -133,17 +134,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             device_entry = device_registry.async_get(device_id)
             if not device_entry:
-                raise ValueError(f"Device {device_id} not found")
+                raise ServiceValidationError(f"Device {device_id} not found")
                 
             # Find the config entry for this device
             config_entry_id = next(iter(device_entry.config_entries))
             register_store = hass.data[DOMAIN].get(config_entry_id)
             
             if not register_store:
-                raise ValueError(f"Device {device_id} is not a Heatmiser Edge device")
+                raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
             
             if register_store.device_type != DEVICE_TYPE_THERMOSTAT:
-                raise ValueError(f"Device {device_id} is not a thermostat")
+                raise ServiceValidationError(f"Device {device_id} is not a thermostat")
             
             # Get service parameters
             temperature = call.data.get("temperature")
@@ -152,11 +153,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             # Validate parameters
             if not 5 <= temperature <= 35:
-                raise ValueError("Temperature must be between 5 and 35 degrees Celsius")
+                raise ServiceValidationError("Temperature must be between 5 and 35 degrees Celsius")
             if not 0 <= duration_hours <= 99:
-                raise ValueError("Duration hours must be between 0 and 99")
+                raise ServiceValidationError("Duration hours must be between 0 and 99")
             if not 0 <= duration_minutes <= 59:
-                raise ValueError("Duration minutes must be between 0 and 59")
+                raise ServiceValidationError("Duration minutes must be between 0 and 59")
             
             _LOGGER.info(f"Boosting thermostat {device_id} to {temperature}°C for {duration_hours}h{duration_minutes}m")
             
@@ -207,17 +208,17 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             device_entry = device_registry.async_get(device_id)
             if not device_entry:
-                raise ValueError(f"Device {device_id} not found")
+                raise ServiceValidationError(f"Device {device_id} not found")
                 
             # Find the config entry for this device
             config_entry_id = next(iter(device_entry.config_entries))
             register_store = hass.data[DOMAIN].get(config_entry_id)
             
             if not register_store:
-                raise ValueError(f"Device {device_id} is not a Heatmiser Edge device")
+                raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
             
             if register_store.device_type != DEVICE_TYPE_TIMER:
-                raise ValueError(f"Device {device_id} is not a timer")
+                raise ServiceValidationError(f"Device {device_id} is not a timer")
             
             # Get service parameters
             state = call.data.get("state")
@@ -226,9 +227,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             
             # Validate parameters
             if not 0 <= duration_hours <= 99:
-                raise ValueError("Duration hours must be between 0 and 99")
+                raise ServiceValidationError("Duration hours must be between 0 and 99")
             if not 0 <= duration_minutes <= 59:
-                raise ValueError("Duration minutes must be between 0 and 59")
+                raise ServiceValidationError("Duration minutes must be between 0 and 59")
             
             _LOGGER.info(f"Boosting timer {device_id} to {state} for {duration_hours}h{duration_minutes}m")
             
