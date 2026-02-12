@@ -278,6 +278,116 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 _LOGGER.error(f"Error boosting timer: {ex}")
                 raise
 
+    async def boost_heatmiser_generic(call: ServiceCall) -> None:
+        """Handle the service call to boost a thermostat or timer device."""
+        _LOGGER.debug(f"[DEBUG] boost_heatmiser_generic service called with data: {call.data}")
+
+        device_registry = dr.async_get(hass)
+        device_ids = call.data.get("device")
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
+
+        for device_id in device_ids:
+            _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
+
+            device_entry = device_registry.async_get(device_id)
+            if not device_entry:
+                raise ServiceValidationError(f"Device {device_id} not found")
+
+            # Find the config entry for this device
+            config_entry_id = next(iter(device_entry.config_entries))
+            register_store = hass.data[DOMAIN].get(config_entry_id)
+
+            if not register_store:
+                raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
+
+            duration_hours = call.data.get("duration_hours", 0)
+            duration_minutes = call.data.get("duration_minutes", 0)
+            frost_protection_override = call.data.get("frost_protection_override", False)
+
+            # Validate duration parameters
+            if not 0 <= duration_hours <= 99:
+                raise ServiceValidationError("Duration hours must be between 0 and 99")
+            if not 0 <= duration_minutes <= 59:
+                raise ServiceValidationError("Duration minutes must be between 0 and 59")
+
+            if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+                temperature = call.data.get("temperature", 24) # Default to 24 degC if not provided
+
+                # Check device is not in frost protection mode
+                if not frost_protection_override:
+                    if register_store.registers[int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE_RD)] == int(PRESET_MODES.index("Frost protection")):
+                        raise ServiceValidationError(
+                            f"Device {device_id} is currently in frost protection mode. Boosting is not allowed in this mode unless 'frost_protection_override' is set to true."
+                        )
+
+                if not 5 <= temperature <= 35:
+                    raise ServiceValidationError("Temperature must be between 5 and 35 degrees Celsius")
+
+                _LOGGER.info(f"Boosting thermostat {device_id} to {temperature}°C for {duration_hours}h{duration_minutes}m")
+
+                try:
+                    await register_store.async_update_device_time()
+
+                    hold_time_value = (duration_hours << 8) | duration_minutes
+                    await register_store.write_register(
+                        int(ThermostatRegisterAddresses.HOLDTIME_HOUR_MIN),
+                        hold_time_value,
+                        refresh_values_after_writing=False
+                    )
+
+                    temp_register_value = int(temperature * 10)
+                    await register_store.write_register(
+                        int(ThermostatRegisterAddresses.HOLD_SET_TEMPERATURE),
+                        temp_register_value,
+                        refresh_values_after_writing=False
+                    )
+
+                    await register_store.write_register(
+                        int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE),
+                        2,
+                        refresh_values_after_writing=True
+                    )
+                except Exception as ex:
+                    _LOGGER.error(f"Error boosting thermostat: {ex}")
+                    raise
+            elif register_store.device_type == DEVICE_TYPE_TIMER:
+                # Temperature is ignored for timer devices; force output on
+                if not frost_protection_override:
+                    if register_store.registers[int(TimerRegisterAddresses.CURRENT_OPERATION_MODE_RD)] == int(PRESET_MODES.index("Frost protection")):
+                        raise ServiceValidationError(
+                            f"Device {device_id} is currently in frost protection mode. Boosting is not allowed in this mode unless 'frost_protection_override' is set to true."
+                        )
+
+                _LOGGER.info(f"Boosting timer {device_id} on for {duration_hours}h{duration_minutes}m")
+
+                try:
+                    await register_store.async_update_device_time()
+
+                    hold_time_value = (duration_hours << 8) | duration_minutes
+                    await register_store.write_register(
+                        int(TimerRegisterAddresses.HOLDTIME_HOUR_MIN),
+                        hold_time_value,
+                        refresh_values_after_writing=False
+                    )
+
+                    await register_store.write_register(
+                        int(TimerRegisterAddresses.TIMER_OUT_FORCE),
+                        1,
+                        refresh_values_after_writing=False
+                    )
+
+                    await register_store.write_register(
+                        int(TimerRegisterAddresses.CURRENT_OPERATION_MODE),
+                        2,
+                        refresh_values_after_writing=True
+                    )
+                except Exception as ex:
+                    _LOGGER.error(f"Error boosting timer: {ex}")
+                    raise
+            else:
+                raise ServiceValidationError(f"Device {device_id} has an unknown device type")
+
     # Register the service
     hass.services.async_register(
         DOMAIN,
@@ -313,6 +423,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         DOMAIN,
         "boost_timer_output",
         boost_timer_output
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "boost_heatmiser_generic",
+        boost_heatmiser_generic
     )
 
     # Return boolean to indicate that initialization was successful.
