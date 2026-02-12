@@ -140,9 +140,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             config_entry_id = next(iter(device_entry.config_entries))
             register_store = hass.data[DOMAIN].get(config_entry_id)
             
+            # Check it has a register store (i.e. is a Heatmiser Edge device)
             if not register_store:
                 raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
             
+            # Check device is a thermostat
             if register_store.device_type != DEVICE_TYPE_THERMOSTAT:
                 raise ServiceValidationError(f"Device {device_id} is not a thermostat")
             
@@ -150,6 +152,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             temperature = call.data.get("temperature")
             duration_hours = call.data.get("duration_hours", 0)
             duration_minutes = call.data.get("duration_minutes", 0)
+            frost_protection_override = call.data.get("frost_protection_override", False)
+            
+            # Check device is not in frost protection mode
+            if not frost_protection_override:
+                if register_store.registers[int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE_RD)] == int(PRESET_MODES.index("Frost protection")): # Frost protection mode 
+                    raise ServiceValidationError(f"Device {device_id} is currently in frost protection mode. Boosting is not allowed in this mode unless 'frost_protection_override' is set to true.")
             
             # Validate parameters
             if not 5 <= temperature <= 35:
@@ -224,6 +232,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             state = call.data.get("state")
             duration_hours = call.data.get("duration_hours", 0)
             duration_minutes = call.data.get("duration_minutes", 0)
+            frost_protection_override = call.data.get("frost_protection_override", False)
+            
+            # Check device is not in frost protection mode
+            if not frost_protection_override:
+                if register_store.registers[int(TimerRegisterAddresses.CURRENT_OPERATION_MODE_RD)] == int(PRESET_MODES.index("Frost protection")): # Frost protection mode 
+                    raise ServiceValidationError(f"Device {device_id} is currently in frost protection mode. Boosting is not allowed in this mode unless 'frost_protection_override' is set to true.")
             
             # Validate parameters
             if not 0 <= duration_hours <= 99:
