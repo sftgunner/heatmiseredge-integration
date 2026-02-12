@@ -188,3 +188,20 @@ boost_heatmiser_generic:
           max: 59
           mode: box
           step: 1
+reset_heatmiser_schedule:
+  name: Reset Heatmiser Schedule
+  description: Reset a thermostat or timer device back to schedule mode
+  fields:
+    device:
+      name: Device
+      description: The Heatmiser Edge device to reset
+      required: true
+      selector:
+        device:
+          integration: heatmiser_edge
+    frost_protection_override:
+      name: Frost Protection Override
+      description: Allow resetting the device while in frost protection mode
+      required: false
+      selector:
+        boolean:

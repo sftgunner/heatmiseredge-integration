@@ -388,6 +388,55 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             else:
                 raise ServiceValidationError(f"Device {device_id} has an unknown device type")
 
+    async def reset_heatmiser_schedule(call: ServiceCall) -> None:
+        """Handle the service call to reset a device to schedule mode."""
+        _LOGGER.debug(f"[DEBUG] reset_heatmiser_schedule service called with data: {call.data}")
+
+        device_registry = dr.async_get(hass)
+        device_ids = call.data.get("device")
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
+
+        for device_id in device_ids:
+            _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
+
+            device_entry = device_registry.async_get(device_id)
+            if not device_entry:
+                raise ServiceValidationError(f"Device {device_id} not found")
+
+            config_entry_id = next(iter(device_entry.config_entries))
+            register_store = hass.data[DOMAIN].get(config_entry_id)
+
+            if not register_store:
+                raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
+
+            frost_protection_override = call.data.get("frost_protection_override", False)
+
+            if not frost_protection_override:
+                if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+                    current_mode = register_store.registers[int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE_RD)]
+                elif register_store.device_type == DEVICE_TYPE_TIMER:
+                    current_mode = register_store.registers[int(TimerRegisterAddresses.CURRENT_OPERATION_MODE_RD)]
+                else:
+                    raise ServiceValidationError(f"Device {device_id} has an unknown device type")
+
+                if current_mode == int(PRESET_MODES.index("Frost protection")):
+                    raise ServiceValidationError(
+                        f"Device {device_id} is currently in frost protection mode. Resetting to schedule is not allowed in this mode unless 'frost_protection_override' is set to true."
+                    )
+
+            _LOGGER.info(f"Resetting device {device_id} to schedule mode")
+
+            try:
+                await register_store.write_register(
+                    int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE),
+                    value=int(PRESET_MODES.index("Schedule")),
+                    refresh_values_after_writing=True
+                )
+            except Exception as ex:
+                _LOGGER.error(f"Error resetting device to schedule: {ex}")
+                raise
+
     # Register the service
     hass.services.async_register(
         DOMAIN,
@@ -429,6 +478,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         DOMAIN,
         "boost_heatmiser_generic",
         boost_heatmiser_generic
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "reset_heatmiser_schedule",
+        reset_heatmiser_schedule
     )
 
     # Return boolean to indicate that initialization was successful.
