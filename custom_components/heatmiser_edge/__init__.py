@@ -9,7 +9,7 @@ import voluptuous as vol
 from homeassistant.helpers import device_registry as dr
 # from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError, ConfigEntryNotReady
 
 from .const import *
 from .heatmiser_edge import *
@@ -502,7 +502,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = register_store
 
-    await register_store.async_update() # Make sure values are all up to date in the register store
+    try:
+        await register_store.async_update() # Make sure values are all up to date in the register store
+    except Exception as ex: # This probably ought to be a pymodbus specific exception but I couldn't get that to work properly
+        _LOGGER.error(f"Unable to connect to device at {entry.data['host']} with Modbus ID {entry.data['modbus_id']}. Please check the device is online and the configuration is correct. Exception details: {ex}")
+        raise ConfigEntryNotReady(f"Unable to connect to device at {entry.data['host']} with Modbus ID {entry.data['modbus_id']}. Please check the device is online and the configuration is correct.") from ex
 
     # This creates each HA object for each platform your device requires.
     # It's done by calling the `async_setup_entry` function in each platform module.
