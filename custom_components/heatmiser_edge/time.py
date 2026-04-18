@@ -133,8 +133,17 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         if self.register_store.registers[self._register_id] in (None, 24):
             self._native_value = None
         else:
-            self._native_value = datetime_time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
-
+            if 0 <= self.register_store.registers[self._register_id] <= 24:
+                if 0 <= self.register_store.registers[self._register_id] <= 59:
+                    try:
+                        self._native_value = datetime_time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
+                    except:
+                        _LOGGER.warning(f"Error occurred when trying to set time native value with register_id {self._register_id} (and+1), which hold values {self.register_store.registers[self._register_id]} and {self.register_store.registers[self._register_id+1]} respectively")
+                else:
+                    _LOGGER.warning(f"Unable to set time native value as minute value for register {self._register_id+1} was {self.register_store.registers[self._register_id+1]}, outside of 0<=X<=59")
+            else:
+                _LOGGER.warning(f"Unable to set time native value as hour value for register {self._register_id} was {self.register_store.registers[self._register_id]}, outside of 0<=X<=24")
+            
         return self._native_value
 
     # @property
