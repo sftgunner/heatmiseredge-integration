@@ -26,8 +26,6 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from pymodbus.client import AsyncModbusTcpClient
-
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
@@ -97,24 +95,24 @@ class HeatmiserEdgeTimer(SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
         self._is_on = True
-        # Add your Modbus write logic here to turn on the timer
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Advance")) , device_id=self._slave_id) # Override also known as "change over" in docs
-        await client.write_register(int(TimerRegisterAddresses.TIMER_OUT_FORCE), value=1, device_id=self._slave_id)
-        client.close()
+        await self.register_store.write_register(
+            int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), int(PRESET_MODES.index("Advance")), refresh_values_after_writing=False
+        ) # Override also known as "change over" in docs
+        await self.register_store.write_register(
+            int(TimerRegisterAddresses.TIMER_OUT_FORCE), 1, refresh_values_after_writing=False
+        )
 
         await self.async_update() # Force an update
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         self._is_on = False
-        # Add your Modbus write logic here to turn off the timer
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Advance")) , device_id=self._slave_id) # Override also known as "change over" in docs
-        await client.write_register(int(TimerRegisterAddresses.TIMER_OUT_FORCE), value=0, device_id=self._slave_id)
-        client.close()
+        await self.register_store.write_register(
+            int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), int(PRESET_MODES.index("Advance")), refresh_values_after_writing=False
+        ) # Override also known as "change over" in docs
+        await self.register_store.write_register(
+            int(TimerRegisterAddresses.TIMER_OUT_FORCE), 0, refresh_values_after_writing=False
+        )
         
         await self.async_update() # Force an update
 

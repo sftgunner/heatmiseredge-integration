@@ -10,6 +10,8 @@ from homeassistant.helpers import device_registry as dr
 # from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.exceptions import ServiceValidationError, ConfigEntryNotReady
+from homeassistant.components.modbus import async_get_unit
+from modbus_connection import ModbusError, ModbusTcpParams
 
 from .const import *
 from .heatmiser_edge import *
@@ -498,13 +500,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Create the register store that will hold the values read from the device
     # NB this is initialised in heatmiser_edge.py
-    register_store = heatmiser_edge_register_store(entry.data["host"],entry.data["port"],entry.data["modbus_id"])
+    # Ask the shared `modbus` integration for a unit handle instead of opening our own socket
+    unit = async_get_unit(
+        hass,
+        entry,
+        ModbusTcpParams(host=entry.data["host"], port=entry.data["port"]),
+        entry.data["modbus_id"],
+    )
+    register_store = heatmiser_edge_register_store(entry.data["host"], entry.data["modbus_id"], unit)
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = register_store
 
     try:
         await register_store.async_update() # Make sure values are all up to date in the register store
-    except Exception as ex: # This probably ought to be a pymodbus specific exception but I couldn't get that to work properly
+    except ModbusError as ex:
+        _LOGGER.error(f"Unable to connect to device at {entry.data['host']} with Modbus ID {entry.data['modbus_id']}. Please check the device is online and the configuration is correct. Exception details: {ex}")
+        raise ConfigEntryNotReady(f"Unable to connect to device at {entry.data['host']} with Modbus ID {entry.data['modbus_id']}. Please check the device is online and the configuration is correct.") from ex
+    except Exception as ex:
         _LOGGER.error(f"Unable to connect to device at {entry.data['host']} with Modbus ID {entry.data['modbus_id']}. Please check the device is online and the configuration is correct. Exception details: {ex}")
         raise ConfigEntryNotReady(f"Unable to connect to device at {entry.data['host']} with Modbus ID {entry.data['modbus_id']}. Please check the device is online and the configuration is correct.") from ex
 

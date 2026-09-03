@@ -30,8 +30,6 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from pymodbus.client import AsyncModbusTcpClient
-
 _LOGGER = logging.getLogger(__name__)
 
 # This function is called as part of the __init__.async_setup_entry (via the
@@ -157,20 +155,18 @@ class HeatmiserEdgeThermostat(ClimateEntity):
                 OnOffValue = 0
             case _:
                 OnOffValue = 1
-                
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE), value=OnOffValue , device_id=self._slave_id)
-        client.close()
+
+        await self.register_store.write_register(
+            int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE), OnOffValue, refresh_values_after_writing=False
+        )
 
         self._hvac_mode = hvac_mode
 
     async def async_set_preset_mode(self, preset_mode):
         """Set new target preset mode."""
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index(preset_mode)), device_id=self._slave_id)
-        client.close()
+        await self.register_store.write_register(
+            int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), int(PRESET_MODES.index(preset_mode)), refresh_values_after_writing=False
+        )
 
         self._preset_mode = preset_mode
 
@@ -185,12 +181,15 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         # When setting temperature, we need to enter preset mode Override
         # This changes the temp until the next scheduled period (same as on device)
 
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Override")) , device_id=self._slave_id)
-        await client.write_register(int(ThermostatRegisterAddresses.HOLD_SET_TEMPERATURE), value=int(temperature)*10, device_id=self._slave_id)
-        await client.write_register(int(ThermostatRegisterAddresses.ADVANCED_SET_TEMPERATURE), value=int(temperature)*10, device_id=self._slave_id)
-        client.close()
+        await self.register_store.write_register(
+            int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), int(PRESET_MODES.index("Override")), refresh_values_after_writing=False
+        )
+        await self.register_store.write_register(
+            int(ThermostatRegisterAddresses.HOLD_SET_TEMPERATURE), int(temperature) * 10, refresh_values_after_writing=False
+        )
+        await self.register_store.write_register(
+            int(ThermostatRegisterAddresses.ADVANCED_SET_TEMPERATURE), int(temperature) * 10, refresh_values_after_writing=False
+        )
 
         self._target_temperature = int(temperature)
 

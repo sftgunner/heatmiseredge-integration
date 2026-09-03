@@ -12,8 +12,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from pymodbus.client import AsyncModbusTcpClient
-
 from .const import *
 from .heatmiser_edge import heatmiser_edge_register_store
 
@@ -158,10 +156,7 @@ class HeatmiserEdgeSelectableRegister(SelectEntity):
             raise ValueError(f"Invalid option {option}")
         index = self._options.index(option)
 
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(self._register_id, value=int(index), device_id=self._slave_id)
-        client.close()
+        await self.register_store.write_register(self._register_id, index, refresh_values_after_writing=False)
 
         await self.register_store.async_update()
 

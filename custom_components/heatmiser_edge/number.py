@@ -30,8 +30,6 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from pymodbus.client import AsyncModbusTcpClient
-
 _LOGGER = logging.getLogger(__name__)
 
 # This function is called as part of the __init__.async_setup_entry (via the
@@ -201,10 +199,7 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
     async def async_set_native_value(self,value: float) -> None:
         """Update the current value."""
         _LOGGER.warning("Attempting to set native value")
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(self._register_id, value=int(value)*self._gain , device_id=self._slave_id)
-        client.close()
+        await self.register_store.write_register(self._register_id, int(value) * self._gain, refresh_values_after_writing=False)
 
         self._native_value = int(value)
         
@@ -289,10 +284,7 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
     async def async_set_native_value(self,value: float) -> None:
         """Update the current value."""
         _LOGGER.warning("Attempting to set native value")
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(self._register_id, value=int(value)*10 , device_id=self._slave_id)
-        client.close()
+        await self.register_store.write_register(self._register_id, int(value) * 10, refresh_values_after_writing=False)
 
         self._native_value = int(value)
         

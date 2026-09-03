@@ -29,8 +29,6 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from pymodbus.client import AsyncModbusTcpClient
-
 _LOGGER = logging.getLogger(__name__)
 
 # This function is called as part of the __init__.async_setup_entry (via the
@@ -153,11 +151,8 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
     async def async_set_value(self,value: time) -> None:
         """Update the current value."""
         _LOGGER.warning(f"Attempting to set time to {int(value.hour)}:{int(value.minute)}")
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(self._register_id, value=int(value.hour) , device_id=self._slave_id)
-        await client.write_register(self._register_id+1, value=int(value.minute) , device_id=self._slave_id)
-        client.close()
+        await self.register_store.write_register(self._register_id, int(value.hour), refresh_values_after_writing=False)
+        await self.register_store.write_register(self._register_id+1, int(value.minute), refresh_values_after_writing=False)
 
         self._native_value = value
 

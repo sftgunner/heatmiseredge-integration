@@ -29,8 +29,6 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from pymodbus.client import AsyncModbusTcpClient
-
 _LOGGER = logging.getLogger(__name__)
 
 # This function is called as part of the __init__.async_setup_entry (via the

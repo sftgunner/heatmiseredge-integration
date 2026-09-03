@@ -28,8 +28,6 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from pymodbus.client import AsyncModbusTcpClient
-
 _LOGGER = logging.getLogger(__name__)
 
 # This function is called as part of the __init__.async_setup_entry (via the
@@ -123,9 +121,6 @@ class HeatmiserEdgeClearTimePeriodButton(ButtonEntity):
     async def async_press(self) -> None:
         """Update the current value."""
         _LOGGER.warning("Attempting to clear time period")
-        client = AsyncModbusTcpClient(self._host)
-        await client.connect()
-        await client.write_register(self._register_id, value=int(24) , device_id=self._slave_id)
-        client.close()
+        await self.register_store.write_register(self._register_id, 24, refresh_values_after_writing=False)
 
         self.register_store.registers[self._register_id] = int(24)
