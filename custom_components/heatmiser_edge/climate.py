@@ -73,7 +73,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
 
     def __init__(self, host, port, slave_id, name, register_store: heatmiser_edge_register_store):
         """Initialize the thermostat."""
-        self.temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_native_temperature_unit = UnitOfTemperature.CELSIUS
         self._current_temperature = None
         self._target_temperature = None
         self._hvac_mode = HVACMode.HEAT
