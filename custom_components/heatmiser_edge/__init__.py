@@ -9,7 +9,7 @@ import voluptuous as vol
 from homeassistant.helpers import device_registry as dr
 # from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError, ConfigEntryNotReady
 
 from .const import *
 from .heatmiser_edge import *
@@ -140,9 +140,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             config_entry_id = next(iter(device_entry.config_entries))
             register_store = hass.data[DOMAIN].get(config_entry_id)
             
+            # Check it has a register store (i.e. is a Heatmiser Edge device)
             if not register_store:
                 raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
             
+            # Check device is a thermostat
             if register_store.device_type != DEVICE_TYPE_THERMOSTAT:
                 raise ServiceValidationError(f"Device {device_id} is not a thermostat")
             
@@ -150,6 +152,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             temperature = call.data.get("temperature")
             duration_hours = call.data.get("duration_hours", 0)
             duration_minutes = call.data.get("duration_minutes", 0)
+            frost_protection_override = call.data.get("frost_protection_override", False)
+            
+            # Check device is not in frost protection mode
+            if not frost_protection_override:
+                if register_store.registers[int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE_RD)] == int(PRESET_MODES.index("Frost protection")): # Frost protection mode 
+                    raise ServiceValidationError(f"Device {device_id} is currently in frost protection mode. Boosting is not allowed in this mode unless 'frost_protection_override' is set to true.")
             
             # Validate parameters
             if not 5 <= temperature <= 35:
@@ -224,6 +232,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             state = call.data.get("state")
             duration_hours = call.data.get("duration_hours", 0)
             duration_minutes = call.data.get("duration_minutes", 0)
+            frost_protection_override = call.data.get("frost_protection_override", False)
+            
+            # Check device is not in frost protection mode
+            if not frost_protection_override:
+                if register_store.registers[int(TimerRegisterAddresses.CURRENT_OPERATION_MODE_RD)] == int(PRESET_MODES.index("Frost protection")): # Frost protection mode 
+                    raise ServiceValidationError(f"Device {device_id} is currently in frost protection mode. Boosting is not allowed in this mode unless 'frost_protection_override' is set to true.")
             
             # Validate parameters
             if not 0 <= duration_hours <= 99:
@@ -264,6 +278,165 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 _LOGGER.error(f"Error boosting timer: {ex}")
                 raise
 
+    async def boost_heatmiser_generic(call: ServiceCall) -> None:
+        """Handle the service call to boost a thermostat or timer device."""
+        _LOGGER.debug(f"[DEBUG] boost_heatmiser_generic service called with data: {call.data}")
+
+        device_registry = dr.async_get(hass)
+        device_ids = call.data.get("device")
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
+
+        for device_id in device_ids:
+            _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
+
+            device_entry = device_registry.async_get(device_id)
+            if not device_entry:
+                raise ServiceValidationError(f"Device {device_id} not found")
+
+            # Find the config entry for this device
+            config_entry_id = next(iter(device_entry.config_entries))
+            register_store = hass.data[DOMAIN].get(config_entry_id)
+
+            if not register_store:
+                raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
+
+            duration_hours = call.data.get("duration_hours", 0)
+            duration_minutes = call.data.get("duration_minutes", 0)
+            frost_protection_override = call.data.get("frost_protection_override", False)
+
+            # Validate duration parameters
+            if not 0 <= duration_hours <= 99:
+                raise ServiceValidationError("Duration hours must be between 0 and 99")
+            if not 0 <= duration_minutes <= 59:
+                raise ServiceValidationError("Duration minutes must be between 0 and 59")
+
+            if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+                temperature = call.data.get("temperature", 24) # Default to 24 degC if not provided
+
+                # Check device is not in frost protection mode
+                if not frost_protection_override:
+                    if register_store.registers[int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE_RD)] == int(PRESET_MODES.index("Frost protection")):
+                        raise ServiceValidationError(
+                            f"Device {device_id} is currently in frost protection mode. Boosting is not allowed in this mode unless 'frost_protection_override' is set to true."
+                        )
+
+                if not 5 <= temperature <= 35:
+                    raise ServiceValidationError("Temperature must be between 5 and 35 degrees Celsius")
+
+                _LOGGER.info(f"Boosting thermostat {device_id} to {temperature}°C for {duration_hours}h{duration_minutes}m")
+
+                try:
+                    await register_store.async_update_device_time()
+
+                    hold_time_value = (duration_hours << 8) | duration_minutes
+                    await register_store.write_register(
+                        int(ThermostatRegisterAddresses.HOLDTIME_HOUR_MIN),
+                        hold_time_value,
+                        refresh_values_after_writing=False
+                    )
+
+                    temp_register_value = int(temperature * 10)
+                    await register_store.write_register(
+                        int(ThermostatRegisterAddresses.HOLD_SET_TEMPERATURE),
+                        temp_register_value,
+                        refresh_values_after_writing=False
+                    )
+
+                    await register_store.write_register(
+                        int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE),
+                        2,
+                        refresh_values_after_writing=True
+                    )
+                except Exception as ex:
+                    _LOGGER.error(f"Error boosting thermostat: {ex}")
+                    raise
+            elif register_store.device_type == DEVICE_TYPE_TIMER:
+                # Temperature is ignored for timer devices; force output on
+                if not frost_protection_override:
+                    if register_store.registers[int(TimerRegisterAddresses.CURRENT_OPERATION_MODE_RD)] == int(PRESET_MODES.index("Frost protection")):
+                        raise ServiceValidationError(
+                            f"Device {device_id} is currently in frost protection mode. Boosting is not allowed in this mode unless 'frost_protection_override' is set to true."
+                        )
+
+                _LOGGER.info(f"Boosting timer {device_id} on for {duration_hours}h{duration_minutes}m")
+
+                try:
+                    await register_store.async_update_device_time()
+
+                    hold_time_value = (duration_hours << 8) | duration_minutes
+                    await register_store.write_register(
+                        int(TimerRegisterAddresses.HOLDTIME_HOUR_MIN),
+                        hold_time_value,
+                        refresh_values_after_writing=False
+                    )
+
+                    await register_store.write_register(
+                        int(TimerRegisterAddresses.TIMER_OUT_FORCE),
+                        1,
+                        refresh_values_after_writing=False
+                    )
+
+                    await register_store.write_register(
+                        int(TimerRegisterAddresses.CURRENT_OPERATION_MODE),
+                        2,
+                        refresh_values_after_writing=True
+                    )
+                except Exception as ex:
+                    _LOGGER.error(f"Error boosting timer: {ex}")
+                    raise
+            else:
+                raise ServiceValidationError(f"Device {device_id} has an unknown device type")
+
+    async def reset_heatmiser_schedule(call: ServiceCall) -> None:
+        """Handle the service call to reset a device to schedule mode."""
+        _LOGGER.debug(f"[DEBUG] reset_heatmiser_schedule service called with data: {call.data}")
+
+        device_registry = dr.async_get(hass)
+        device_ids = call.data.get("device")
+        if isinstance(device_ids, str):
+            device_ids = [device_ids]
+
+        for device_id in device_ids:
+            _LOGGER.debug(f"[DEBUG] Processing device_id: {device_id}")
+
+            device_entry = device_registry.async_get(device_id)
+            if not device_entry:
+                raise ServiceValidationError(f"Device {device_id} not found")
+
+            config_entry_id = next(iter(device_entry.config_entries))
+            register_store = hass.data[DOMAIN].get(config_entry_id)
+
+            if not register_store:
+                raise ServiceValidationError(f"Device {device_id} is not a Heatmiser Edge device")
+
+            frost_protection_override = call.data.get("frost_protection_override", False)
+
+            if not frost_protection_override:
+                if register_store.device_type == DEVICE_TYPE_THERMOSTAT:
+                    current_mode = register_store.registers[int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE_RD)]
+                elif register_store.device_type == DEVICE_TYPE_TIMER:
+                    current_mode = register_store.registers[int(TimerRegisterAddresses.CURRENT_OPERATION_MODE_RD)]
+                else:
+                    raise ServiceValidationError(f"Device {device_id} has an unknown device type")
+
+                if current_mode == int(PRESET_MODES.index("Frost protection")):
+                    raise ServiceValidationError(
+                        f"Device {device_id} is currently in frost protection mode. Resetting to schedule is not allowed in this mode unless 'frost_protection_override' is set to true."
+                    )
+
+            _LOGGER.info(f"Resetting device {device_id} to schedule mode")
+
+            try:
+                await register_store.write_register(
+                    int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE),
+                    value=int(PRESET_MODES.index("Schedule")),
+                    refresh_values_after_writing=True
+                )
+            except Exception as ex:
+                _LOGGER.error(f"Error resetting device to schedule: {ex}")
+                raise
+
     # Register the service
     hass.services.async_register(
         DOMAIN,
@@ -301,6 +474,18 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         boost_timer_output
     )
 
+    hass.services.async_register(
+        DOMAIN,
+        "boost_heatmiser_generic",
+        boost_heatmiser_generic
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "reset_heatmiser_schedule",
+        reset_heatmiser_schedule
+    )
+
     # Return boolean to indicate that initialization was successful.
     return True
 
@@ -317,7 +502,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = register_store
 
-    await register_store.async_update() # Make sure values are all up to date in the register store
+    try:
+        await register_store.async_update() # Make sure values are all up to date in the register store
+    except Exception as ex: # This probably ought to be a pymodbus specific exception but I couldn't get that to work properly
+        _LOGGER.error(f"Unable to connect to device at {entry.data['host']} with Modbus ID {entry.data['modbus_id']}. Please check the device is online and the configuration is correct. Exception details: {ex}")
+        raise ConfigEntryNotReady(f"Unable to connect to device at {entry.data['host']} with Modbus ID {entry.data['modbus_id']}. Please check the device is online and the configuration is correct.") from ex
 
     # This creates each HA object for each platform your device requires.
     # It's done by calling the `async_setup_entry` function in each platform module.
