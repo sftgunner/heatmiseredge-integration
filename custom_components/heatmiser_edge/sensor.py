@@ -89,7 +89,7 @@ class HeatmiserEdgeReadableRegisterGeneric(SensorEntity):
 
         self.register_store = register_store
         
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
+        self._id = f"{DOMAIN}{self.register_store.identity_host}{self.register_store.identity_modbus_id}{self.register_store.device_type}"
 
         self._native_value = None
 
@@ -99,8 +99,6 @@ class HeatmiserEdgeReadableRegisterGeneric(SensorEntity):
         self._attr_native_unit_of_measurement = units
 
 
-        if port != 502:
-            _LOGGER.error("Support not added for ports other than 502")
 
 
     @property
@@ -156,7 +154,7 @@ class HeatmiserEdgeReadableRegisterGeneric(SensorEntity):
     # async def async_set_native_value(self,value: float) -> None:
     #     """Update the current value."""
     #     _LOGGER.warning("Attempting to set native value")
-    #     client = AsyncModbusTcpClient(self._host)
+    #     client = AsyncModbusTcpClient(self._host, port=self._port)
     #     await client.connect()
     #     await client.write_register(self._register_id, int(value)*10 , self._slave_id)
     #     client.close()

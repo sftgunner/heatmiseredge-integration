@@ -134,7 +134,7 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
 
         self.register_store = register_store
         
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
+        self._id = f"{DOMAIN}{self.register_store.identity_host}{self.register_store.identity_modbus_id}{self.register_store.device_type}"
 
         self._native_value = None
 
@@ -144,8 +144,6 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
         self._attr_native_step = 1
 
 
-        if port != 502:
-            _LOGGER.error("Support not added for ports other than 502")
 
 
     async def async_added_to_hass(self) -> None:
@@ -201,7 +199,7 @@ class HeatmiserEdgeWritableRegisterGeneric(NumberEntity):
     async def async_set_native_value(self,value: float) -> None:
         """Update the current value."""
         _LOGGER.warning("Attempting to set native value")
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(self._register_id, value=int(value)*self._gain , device_id=self._slave_id)
         client.close()
@@ -225,7 +223,7 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
 
         self.register_store = register_store
         
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
+        self._id = f"{DOMAIN}{self.register_store.identity_host}{self.register_store.identity_modbus_id}{self.register_store.device_type}"
 
         self._native_value = None
 
@@ -235,8 +233,6 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
         self._attr_native_step = 0.5
 
 
-        if port != 502:
-            _LOGGER.error("Support not added for ports other than 502")
 
 
     async def async_added_to_hass(self) -> None:
@@ -289,7 +285,7 @@ class HeatmiserEdgeWritableRegisterTemp(NumberEntity):
     async def async_set_native_value(self,value: float) -> None:
         """Update the current value."""
         _LOGGER.warning("Attempting to set native value")
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(self._register_id, value=int(value)*10 , device_id=self._slave_id)
         client.close()

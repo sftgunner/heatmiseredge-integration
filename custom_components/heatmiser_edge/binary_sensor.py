@@ -78,13 +78,11 @@ class HeatmiserEdgeReadableRegisterBinary(BinarySensorEntity):
 
         self.register_store = register_store
         
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
+        self._id = f"{DOMAIN}{self.register_store.identity_host}{self.register_store.identity_modbus_id}{self.register_store.device_type}"
 
         self._is_on = None
 
 
-        if port != 502:
-            _LOGGER.error("Support not added for ports other than 502")
 
 
     @property

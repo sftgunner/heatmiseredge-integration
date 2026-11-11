@@ -18,7 +18,7 @@ class heatmiser_edge_register_store:
         self._update_listeners: List[Callable[[], None]] = []
         
     async def write_register(self, register: int, value: int, refresh_values_after_writing: bool) -> None:
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         """Write a value to a specific register."""
         try:
@@ -32,7 +32,7 @@ class heatmiser_edge_register_store:
             await self.async_update()  # Refresh register values after writing
         
     async def write_register_range(self, start_register: int, values: List[int], refresh_values_after_writing: bool) -> None:
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         """Write a range of values starting from a specific register."""
         # Write data in chunks of up to 10 registers at a time
@@ -52,7 +52,7 @@ class heatmiser_edge_register_store:
 
     async def async_update(self) -> None:
         _LOGGER.debug("Updating register store for device %s at %s", self._slave_id, self._host)
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
 
         register_updated_values = [None] * 218
@@ -101,7 +101,7 @@ class heatmiser_edge_register_store:
             hour_minute = (current_time.tm_hour << 8) + current_time.tm_min
             second = current_time.tm_sec
             _LOGGER.info("Updating time on device %d to %d-%02d-%02d %02d:%02d:%02d",self._slave_id, year, current_time.tm_mon, current_time.tm_mday, current_time.tm_hour, current_time.tm_min, current_time.tm_sec)
-            client = AsyncModbusTcpClient(self._host)
+            client = AsyncModbusTcpClient(self._host, port=self._port)
             await client.connect()
             if int(is_dst) != int(self.registers[int(RegisterAddresses[self.device_type].DAYLIGHT_SAVING_STATUS_RD)]):
                 _LOGGER.info("Updating daylight saving status on device %d to %d", self._slave_id, is_dst)

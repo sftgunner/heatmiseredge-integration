@@ -86,10 +86,8 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         
         self.register_store = register_store
         
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
+        self._id = f"{DOMAIN}{self.register_store.identity_host}{self.register_store.identity_modbus_id}{self.register_store.device_type}"
 
-        if port != 502:
-            _LOGGER.error("Support not added for ports other than 502")
 
 
     @property
@@ -158,7 +156,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
             case _:
                 OnOffValue = 1
                 
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(int(ThermostatRegisterAddresses.THERMOSTAT_ON_OFF_MODE), value=OnOffValue , device_id=self._slave_id)
         client.close()
@@ -167,7 +165,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
 
     async def async_set_preset_mode(self, preset_mode):
         """Set new target preset mode."""
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index(preset_mode)), device_id=self._slave_id)
         client.close()
@@ -185,7 +183,7 @@ class HeatmiserEdgeThermostat(ClimateEntity):
         # When setting temperature, we need to enter preset mode Override
         # This changes the temp until the next scheduled period (same as on device)
 
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(int(ThermostatRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Override")) , device_id=self._slave_id)
         await client.write_register(int(ThermostatRegisterAddresses.HOLD_SET_TEMPERATURE), value=int(temperature)*10, device_id=self._slave_id)

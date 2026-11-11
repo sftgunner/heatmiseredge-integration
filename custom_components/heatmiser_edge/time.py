@@ -95,12 +95,10 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
 
         self.register_store = register_store
         
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
+        self._id = f"{DOMAIN}{self.register_store.identity_host}{self.register_store.identity_modbus_id}{self.register_store.device_type}"
 
         self._native_value = None
 
-        if port != 502:
-            _LOGGER.error("Support not added for ports other than 502")
 
 
     @property
@@ -133,8 +131,17 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
         if self.register_store.registers[self._register_id] in (None, 24):
             self._native_value = None
         else:
-            self._native_value = datetime_time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
-
+            if 0 <= self.register_store.registers[self._register_id] <= 24:
+                if 0 <= self.register_store.registers[self._register_id] <= 59:
+                    try:
+                        self._native_value = datetime_time(self.register_store.registers[self._register_id],self.register_store.registers[self._register_id+1],0)
+                    except:
+                        _LOGGER.warning(f"Error occurred when trying to set time native value with register_id {self._register_id} (and+1), which hold values {self.register_store.registers[self._register_id]} and {self.register_store.registers[self._register_id+1]} respectively")
+                else:
+                    _LOGGER.warning(f"Unable to set time native value as minute value for register {self._register_id+1} was {self.register_store.registers[self._register_id+1]}, outside of 0<=X<=59")
+            else:
+                _LOGGER.warning(f"Unable to set time native value as hour value for register {self._register_id} was {self.register_store.registers[self._register_id]}, outside of 0<=X<=24")
+            
         return self._native_value
 
     # @property
@@ -144,7 +151,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
     async def async_set_value(self,value: time) -> None:
         """Update the current value."""
         _LOGGER.warning(f"Attempting to set time to {int(value.hour)}:{int(value.minute)}")
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(self._register_id, value=int(value.hour) , device_id=self._slave_id)
         await client.write_register(self._register_id+1, value=int(value.minute) , device_id=self._slave_id)
@@ -167,7 +174,7 @@ class HeatmiserEdgeWritableRegisterTime(TimeEntity):
 
     # async def async_update(self) -> None:
     #     _LOGGER.warning("Attempting to update time (skipping)")
-    #     # client = AsyncModbusTcpClient(self._host)
+    #     # client = AsyncModbusTcpClient(self._host, port=self._port)
     #     # await client.connect()
     #     # value_result = await client.read_holding_registers(self._register_id, SINGLE_REGISTER, self._slave_id)
     #     # self._current_temperature = value_result.registers[0]/10
