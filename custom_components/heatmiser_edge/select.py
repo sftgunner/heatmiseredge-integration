@@ -110,13 +110,11 @@ class HeatmiserEdgeSelectableRegister(SelectEntity):
 
         self.register_store = register_store
         
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
+        self._id = f"{DOMAIN}{self.register_store.identity_host}{self.register_store.identity_modbus_id}{self.register_store.device_type}"
 
         self._options = list(lookup)
         self._current_index: Optional[int] = None
 
-        if port != 502:
-            _LOGGER.error("Support not added for ports other than 502")
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -158,7 +156,7 @@ class HeatmiserEdgeSelectableRegister(SelectEntity):
             raise ValueError(f"Invalid option {option}")
         index = self._options.index(option)
 
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(self._register_id, value=int(index), device_id=self._slave_id)
         client.close()

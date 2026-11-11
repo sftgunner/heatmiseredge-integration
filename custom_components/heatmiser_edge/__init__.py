@@ -499,6 +499,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create the register store that will hold the values read from the device
     # NB this is initialised in heatmiser_edge.py
     register_store = heatmiser_edge_register_store(entry.data["host"],entry.data["port"],entry.data["modbus_id"])
+    register_store.identity_host = entry.data.get("identity_host", entry.data["host"])
+    register_store.identity_modbus_id = entry.data.get("identity_modbus_id", entry.data["modbus_id"])
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = register_store
 

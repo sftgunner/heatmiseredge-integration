@@ -9,6 +9,14 @@
                 "modbus_id": "MODBUS ID (aka slave id)",
                 "name": "Name"
             }
+                    },
+                    "reconfigure": {
+                        "title": "Reconfigure Heatmiser TCP connection",
+                        "data": {
+                                "host": "Hostname / IP Address",
+                                "port": "Port",
+                                "modbus_id": "MODBUS ID (aka slave id)"
+                        }
           }
       },
       "error": {
