@@ -123,6 +123,41 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user", data_schema=DATA_SCHEMA, errors=errors
         )
 
+    async def async_step_reconfigure(self, user_input=None):
+        """Update the connection settings of an existing device."""
+        entry = self._get_reconfigure_entry()
+        errors = {}
+        if user_input is not None:
+            try:
+                info = await validate_input(self.hass, {**entry.data, **user_input})
+                return self.async_update_reload_and_abort(
+                    entry,
+                    title=info["title"],
+                    data_updates={
+                        **user_input,
+                        "identity_host": entry.data.get("identity_host", entry.data["host"]),
+                        "identity_modbus_id": entry.data.get("identity_modbus_id", entry.data["modbus_id"]),
+                    },
+                )
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except InvalidHost:
+                errors["host"] = "cannot_connect"
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+
+        values = user_input if user_input is not None else entry.data
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema({
+                vol.Required("host", default=values["host"]): cv.string,
+                vol.Required("port", default=values["port"]): cv.port,
+                vol.Required("modbus_id", default=values["modbus_id"]): cv.port,
+            }),
+            errors=errors,
+        )
+
 
 class CannotConnect(exceptions.HomeAssistantError):
     """Error to indicate we cannot connect."""

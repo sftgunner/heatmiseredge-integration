@@ -62,10 +62,8 @@ class HeatmiserEdgeTimer(SwitchEntity):
         self._device_name = name
         self._is_on = False
         self.register_store = register_store
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
+        self._id = f"{DOMAIN}{self.register_store.identity_host}{self.register_store.identity_modbus_id}{self.register_store.device_type}"
 
-        if port != 502:
-            _LOGGER.error("Support not added for ports other than 502")
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -98,7 +96,7 @@ class HeatmiserEdgeTimer(SwitchEntity):
         """Turn the switch on."""
         self._is_on = True
         # Add your Modbus write logic here to turn on the timer
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Advance")) , device_id=self._slave_id) # Override also known as "change over" in docs
         await client.write_register(int(TimerRegisterAddresses.TIMER_OUT_FORCE), value=1, device_id=self._slave_id)
@@ -110,7 +108,7 @@ class HeatmiserEdgeTimer(SwitchEntity):
         """Turn the switch off."""
         self._is_on = False
         # Add your Modbus write logic here to turn off the timer
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(int(TimerRegisterAddresses.CURRENT_OPERATION_MODE), value=int(PRESET_MODES.index("Advance")) , device_id=self._slave_id) # Override also known as "change over" in docs
         await client.write_register(int(TimerRegisterAddresses.TIMER_OUT_FORCE), value=0, device_id=self._slave_id)

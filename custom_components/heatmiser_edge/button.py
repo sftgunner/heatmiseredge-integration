@@ -88,11 +88,9 @@ class HeatmiserEdgeClearTimePeriodButton(ButtonEntity):
 
         self.register_store = register_store
         
-        self._id = f"{DOMAIN}{self._host}{self._slave_id}{self.register_store.device_type}"
+        self._id = f"{DOMAIN}{self.register_store.identity_host}{self.register_store.identity_modbus_id}{self.register_store.device_type}"
 
 
-        if port != 502:
-            _LOGGER.error("Support not added for ports other than 502")
 
 
     @property
@@ -123,7 +121,7 @@ class HeatmiserEdgeClearTimePeriodButton(ButtonEntity):
     async def async_press(self) -> None:
         """Update the current value."""
         _LOGGER.warning("Attempting to clear time period")
-        client = AsyncModbusTcpClient(self._host)
+        client = AsyncModbusTcpClient(self._host, port=self._port)
         await client.connect()
         await client.write_register(self._register_id, value=int(24) , device_id=self._slave_id)
         client.close()
